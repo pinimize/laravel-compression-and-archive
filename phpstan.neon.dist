@@ -1,0 +1,15 @@
+parameters:
+    level: 6
+    paths:
+        - src
+
+    tmpDir: /tmp/phpstan
+
+    checkMissingIterableValueType: true
+
+    reportStaticMethodSignatures: true
+
+    parallel:
+        jobSize: 20
+        maximumNumberOfProcesses: 32
+        minimumNumberOfJobsPerProcess: 2
