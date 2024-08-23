@@ -31,6 +31,7 @@ class GzipDriverTest extends TestCase
 
         $this->assertNotEquals($original, $compressed);
         $this->assertStringStartsWith("\x1f\x8b\x08", $compressed); // Gzip magic number
+        $this->assertEquals($original, gzdecode($compressed));
     }
 
     #[Test]
@@ -42,6 +43,7 @@ class GzipDriverTest extends TestCase
         $compressed = $gzipDriver->string($original);
 
         $this->assertLessThan(strlen($original), strlen($compressed));
+        $this->assertEquals($original, gzdecode($compressed));
     }
 
     public static function compressionLevelProvider(): array
@@ -104,6 +106,7 @@ class GzipDriverTest extends TestCase
 
         $this->assertIsResource($compressedResource);
         $actualData = stream_get_contents($compressedResource);
+        $this->assertStringStartsWith("\x1f\x8b\x08", $actualData); // Gzip magic number
         $expectedData = $this->gzipDriver->string($originalData);
 
         $this->assertEquals($expectedData, $actualData);
@@ -150,6 +153,17 @@ class GzipDriverTest extends TestCase
         fclose($compressedResource2);
     }
 
+    #[Test]
+    public function it_can_get_config(): void
+    {
+        $config = $this->gzipDriver->getConfig();
+        $this->assertIsArray($config);
+        $this->assertArrayHasKey('level', $config);
+        $this->assertArrayHasKey('encoding', $config);
+        $this->assertEquals(6, $config['level']);
+        $this->assertEquals(FORCE_GZIP, $config['encoding']);
+    }
+
     private function getResourceSize($resource): int
     {
         fseek($resource, 0, SEEK_END);
@@ -157,5 +171,86 @@ class GzipDriverTest extends TestCase
         rewind($resource);
 
         return $size;
+    }
+
+    #[Test]
+    public function it_can_compress_a_file(): void
+    {
+        $tempDir = sys_get_temp_dir();
+        $sourceFile = tempnam($tempDir, 'gzip_test_source');
+        $destFile = tempnam($tempDir, 'gzip_test_dest');
+
+        $originalData = str_repeat('Hello, World! ', 1000);
+        file_put_contents($sourceFile, $originalData);
+
+        $result = $this->gzipDriver->file($sourceFile, $destFile);
+
+        $this->assertTrue($result);
+        $this->assertFileExists($destFile);
+        $this->assertLessThan(filesize($sourceFile), filesize($destFile));
+        $this->assertEquals($originalData, gzdecode(file_get_contents($destFile)));
+
+        unlink($sourceFile);
+        unlink($destFile);
+    }
+
+    #[Test]
+    public function it_throws_exception_for_non_existent_source_file(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Source file does not exist');
+
+        $this->gzipDriver->file('non_existent_file.txt', 'output.gz');
+    }
+
+    #[Test]
+    public function it_throws_exception_for_invalid_destination(): void
+    {
+        $tempDir = sys_get_temp_dir();
+        $sourceFile = tempnam($tempDir, 'gzip_test_source');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to open output stream');
+
+        // Set up error handling to convert warnings to exceptions
+        set_error_handler(function ($severity, $message, $file, $line) {
+            throw new RuntimeException($message, $severity, new \ErrorException($message, 0, $severity, $file, $line));
+        });
+
+        try {
+            $this->gzipDriver->file($sourceFile, '/invalid/path/output.gz');
+        } finally {
+            // Restore the original error handler
+            restore_error_handler();
+            // Clean up the temporary file
+            if (file_exists($sourceFile)) {
+                unlink($sourceFile);
+            }
+        }
+    }
+
+    #[Test]
+    public function it_compresses_file_with_custom_options(): void
+    {
+        $tempDir = sys_get_temp_dir();
+        $sourceFile = tempnam($tempDir, 'gzip_test_source');
+        $destFile1 = tempnam($tempDir, 'gzip_test_dest1');
+        $destFile2 = tempnam($tempDir, 'gzip_test_dest2');
+
+        $sourceContent = str_repeat('Hello, World! ', 1000);
+        file_put_contents($sourceFile, $sourceContent);
+
+        $this->gzipDriver->file($sourceFile, $destFile1, ['level' => 1]);
+        $this->gzipDriver->file($sourceFile, $destFile2, ['level' => 9]);
+
+        $this->assertLessThan(
+            filesize($destFile1),
+            filesize($destFile2),
+        );
+
+        // Clean up
+        unlink($sourceFile);
+        unlink($destFile1);
+        unlink($destFile2);
     }
 }

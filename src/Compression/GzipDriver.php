@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Pinimize\Compression;
 
+use Illuminate\Support\Str;
 use Pinimize\Contracts\CompressionContract;
 use Pinimize\Support\Driver;
 use RuntimeException;
+use Throwable;
 
 /**
  * @phpstan-type GzipConfigArray array{
@@ -47,6 +49,12 @@ class GzipDriver extends Driver implements CompressionContract
         return gzencode($string, $options['level'], $options['encoding']);
     }
 
+    /**
+     * Compress a resource stream.
+     *
+     * @param  resource  $resource
+     * @return resource
+     */
     public function resource($resource, array $options = [])
     {
         if (! is_resource($resource)) {
@@ -54,39 +62,131 @@ class GzipDriver extends Driver implements CompressionContract
         }
 
         $options = $this->mergeWithConfig($options);
-        $level = $options['level'];
-        $encoding = $options['encoding'];
-
-        $outStream = fopen('php://temp', 'w+b');
-        if ($outStream === false) {
-            throw new RuntimeException('Failed to open output stream');
-        }
-
-        $deflateContext = deflate_init(ZLIB_ENCODING_GZIP, ['level' => $level]);
-        if ($deflateContext === false) {
-            throw new RuntimeException('Failed to initialize deflate context');
-        }
-
-        while (! feof($resource)) {
-            $chunk = fread($resource, 8192);
-            if ($chunk === false) {
-                throw new RuntimeException('Failed to read from resource');
-            }
-
-            $compressed = deflate_add($deflateContext, $chunk, ZLIB_NO_FLUSH);
-            fwrite($outStream, $compressed);
-        }
-
-        $compressed = deflate_add($deflateContext, '', ZLIB_FINISH);
-        fwrite($outStream, $compressed);
+        $outStream = $this->createOutputStream();
+        $this->compressStream($resource, $outStream, $options);
 
         rewind($outStream);
 
         return $outStream;
     }
 
+    /**
+     * Compress a file.
+     *
+     * @param  string  $from  Path to the source file
+     * @param  string|null  $to  Path to the destination file (optional)
+     * @param  array  $options  Additional options for compression
+     * @return resource|bool The compressed file resource or boolean indicating success
+     */
+    public function file(string $from, ?string $to = null, array $options = []): bool
+    {
+        if (! file_exists($from)) {
+            throw new RuntimeException("Source file does not exist: $from");
+        }
+        if ($to === null) {
+            $to = Str::finish($from, '.'.$this->getFileExtension());
+        }
+
+        $options = $this->mergeWithConfig($options);
+        $sourceHandle = $this->openSourceFile($from);
+        $outStream = $this->createOutputStream($to);
+
+        $this->compressStream($sourceHandle, $outStream, $options);
+
+        fclose($sourceHandle);
+        fclose($outStream);
+
+        return true;
+    }
+
+    public function getRatio(string $original, string $compressed, array $options = []): float
+    {
+        $originalSize = strlen($original);
+        $compressedSize = strlen($compressed);
+
+        if ($originalSize === 0) {
+            return 0.0;
+        }
+
+        return 1 - ($compressedSize / $originalSize);
+    }
+
+    public function getSupportedAlgorithms(): array
+    {
+        return [
+            FORCE_GZIP,
+        ];
+    }
+
     public function getFileExtension(): string
     {
         return 'gz';
+    }
+
+    /**
+     * Open the source file.
+     *
+     * @return resource
+     */
+    protected function openSourceFile(string $source)
+    {
+        $sourceHandle = fopen($source, 'rb');
+        if ($sourceHandle === false) {
+            throw new RuntimeException("Failed to open source file: $source");
+        }
+
+        return $sourceHandle;
+    }
+
+    /**
+     * Create an output stream.
+     *
+     * @return resource
+     */
+    protected function createOutputStream(?string $destination = null)
+    {
+        try {
+            $outStream = ($destination === null)
+                ? fopen('php://temp', 'w+b')
+                : fopen($destination, 'wb');
+
+            if ($outStream === false) {
+                throw new RuntimeException('Failed to open output stream');
+            }
+
+            return $outStream;
+        } catch (Throwable $e) {
+            throw new RuntimeException('Failed to open output stream: '.$e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Compress a stream.
+     *
+     * @param  resource  $input
+     * @param  resource  $output
+     */
+    protected function compressStream($input, $output, array $options)
+    {
+        $level = $options['level'] ?? -1;
+        $encoding = $options['encoding'] ?? ZLIB_ENCODING_GZIP;
+
+        $deflateContext = deflate_init($encoding, ['level' => $level]);
+        if ($deflateContext === false) {
+            throw new RuntimeException('Failed to initialize deflate context');
+        }
+
+        while (! feof($input)) {
+            $chunk = fread($input, 8192);
+            if ($chunk === false) {
+                throw new RuntimeException('Failed to read from input stream');
+            }
+
+            $compressed = deflate_add($deflateContext, $chunk, ZLIB_NO_FLUSH);
+            fwrite($output, $compressed);
+        }
+
+        $compressed = deflate_add($deflateContext, '', ZLIB_FINISH);
+        fwrite($output, $compressed);
     }
 }

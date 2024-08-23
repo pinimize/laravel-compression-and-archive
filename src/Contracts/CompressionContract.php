@@ -16,6 +16,14 @@ interface CompressionContract
     public function string(string $string, array $options = []): string;
 
     /**
+     * Compress a file.
+     *
+     * @param  array  $options  Additional options for compression
+     * @return bool Boolean indicating success
+     */
+    public function file(string $from, ?string $to = null, array $options = []): bool;
+
+    /**
      * Compress a resource.
      *
      * @param  resource  $resource  The resource to compress
@@ -24,4 +32,20 @@ interface CompressionContract
      * @return resource|bool The compressed resource or boolean indicating success
      */
     public function resource($resource, array $options = []);
+
+    /**
+     * Get the compression ratio between original and compressed data.
+     *
+     * @param  string  $original  Path to the original file
+     * @param  string  $compressed  Path to the compressed file
+     * @return float The compression ratio
+     */
+    public function getRatio(string $original, string $compressed, array $options = []): float;
+
+    /**
+     * Get the list of supported compression algorithms.
+     *
+     * @return array<int, scalar>
+     */
+    public function getSupportedAlgorithms(): array;
 }

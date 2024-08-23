@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Pinimize\Compression;
 
+use Illuminate\Support\Str;
 use Pinimize\Contracts\CompressionContract;
 use Pinimize\Support\Driver;
 use RuntimeException;
+use Throwable;
 
 /**
  * @phpstan-type ZlibConfigArray array{
@@ -56,77 +58,133 @@ class ZlibDriver extends Driver implements CompressionContract
         }
 
         $options = $this->mergeWithConfig($options);
-        $level = $options['level'] ?? -1;
-        $encoding = $options['encoding'] ?? ZLIB_ENCODING_DEFLATE;
-
-        $outStream = fopen('php://temp', 'w+b');
-        if ($outStream === false) {
-            throw new RuntimeException('Failed to open output stream');
-        }
-
-        switch ($encoding) {
-            case ZLIB_ENCODING_RAW:
-                $filter = 'zlib.deflate';
-                break;
-            case ZLIB_ENCODING_GZIP:
-                $filter = 'zlib.deflate';
-                fwrite($outStream, "\x1f\x8b\x08\x00".pack('V', time())."\x00\x03");
-                break;
-            case ZLIB_ENCODING_DEFLATE:
-            default:
-                $filter = 'zlib.deflate';
-                fwrite($outStream, "\x78\x9c"); // zlib header
-                break;
-        }
-
-        $params = ['level' => $level];
-        $deflateFilter = stream_filter_append($outStream, $filter, STREAM_FILTER_WRITE, $params);
-
-        $crc = 0;
-        $size = 0;
-        $adler32 = 1;
-        while (! feof($resource)) {
-            $chunk = fread($resource, 8192);
-            if ($chunk === false) {
-                throw new RuntimeException('Failed to read from resource');
-            }
-            $size += strlen($chunk);
-            $crc = crc32($chunk) ^ (($crc >> 8) & 0xFFFFFF);
-            $adler32 = $this->updateAdler32($adler32, $chunk);
-            fwrite($outStream, $chunk);
-        }
-
-        stream_filter_remove($deflateFilter);
-
-        if ($encoding === ZLIB_ENCODING_GZIP) {
-            // Add GZIP footer
-            fwrite($outStream, pack('V', $crc));
-            fwrite($outStream, pack('V', $size));
-        } elseif ($encoding === ZLIB_ENCODING_DEFLATE) {
-            // Add Adler-32 checksum
-            fwrite($outStream, pack('N', $adler32));
-        }
+        $outStream = $this->createOutputStream();
+        $this->compressStream($resource, $outStream, $options);
 
         rewind($outStream);
 
         return $outStream;
     }
 
-    private function updateAdler32($adler, $data)
+    /**
+     * Compress a file using zlib.
+     *
+     * @param  string  $from  Path to the source file
+     * @param  string|null  $to  Path to the destination file (optional)
+     * @param  array  $options  Additional options for compression
+     * @return bool Indicates success
+     */
+    public function file(string $from, ?string $to = null, array $options = []): bool
     {
-        $s1 = $adler & 0xFFFF;
-        $s2 = ($adler >> 16) & 0xFFFF;
-
-        for ($i = 0; $i < strlen($data); $i++) {
-            $s1 = ($s1 + ord($data[$i])) % 65521;
-            $s2 = ($s2 + $s1) % 65521;
+        if (! file_exists($from)) {
+            throw new RuntimeException("Source file does not exist: $from");
+        }
+        if ($to === null) {
+            $to = Str::finish($from, '.'.$this->getFileExtension());
         }
 
-        return ($s2 << 16) + $s1;
+        $options = $this->mergeWithConfig($options);
+        $sourceHandle = $this->openSourceFile($from);
+        $outStream = $this->createOutputStream($to);
+
+        $this->compressStream($sourceHandle, $outStream, $options);
+
+        fclose($sourceHandle);
+        fclose($outStream);
+
+        return true;
+    }
+
+    public function getRatio(string $original, string $compressed, array $options = []): float
+    {
+        $originalSize = strlen($original);
+        $compressedSize = strlen($compressed);
+
+        if ($originalSize === 0) {
+            return 0.0;
+        }
+
+        return 1 - ($compressedSize / $originalSize);
+    }
+
+    public function getSupportedAlgorithms(): array
+    {
+        return [
+            ZLIB_ENCODING_RAW,
+            ZLIB_ENCODING_GZIP,
+            ZLIB_ENCODING_DEFLATE,
+        ];
     }
 
     public function getFileExtension(): string
     {
         return 'zz';
+    }
+
+    /**
+     * Open the source file.
+     *
+     * @return resource
+     */
+    protected function openSourceFile(string $source)
+    {
+        $sourceHandle = fopen($source, 'rb');
+        if ($sourceHandle === false) {
+            throw new RuntimeException("Failed to open source file: $source");
+        }
+
+        return $sourceHandle;
+    }
+
+    /**
+     * Create an output stream.
+     *
+     * @return resource
+     */
+    protected function createOutputStream(?string $destination = null)
+    {
+        try {
+            $outStream = ($destination === null)
+                ? fopen('php://temp', 'w+b')
+                : fopen($destination, 'wb');
+
+            if ($outStream === false) {
+                throw new RuntimeException('Failed to open output stream');
+            }
+
+            return $outStream;
+        } catch (Throwable $e) {
+            throw new RuntimeException('Failed to open output stream: '.$e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Compress a stream.
+     *
+     * @param  resource  $input
+     * @param  resource  $output
+     */
+    protected function compressStream($input, $output, array $options)
+    {
+        $level = $options['level'] ?? -1;
+        $encoding = $options['encoding'] ?? ZLIB_ENCODING_DEFLATE;
+
+        $deflateContext = deflate_init($encoding, ['level' => $level]);
+        if ($deflateContext === false) {
+            throw new RuntimeException('Failed to initialize deflate context');
+        }
+
+        while (! feof($input)) {
+            $chunk = fread($input, 8192);
+            if ($chunk === false) {
+                throw new RuntimeException('Failed to read from input stream');
+            }
+
+            $compressed = deflate_add($deflateContext, $chunk, ZLIB_NO_FLUSH);
+            fwrite($output, $compressed);
+        }
+
+        $compressed = deflate_add($deflateContext, '', ZLIB_FINISH);
+        fwrite($output, $compressed);
     }
 }
