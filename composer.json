@@ -1,65 +1,81 @@
 {
-    "name": "pinimize/laravel-compression-and-archive",
-    "description": "A Laravel package for compression and archiving",
-    "keywords" : [
-        "pinimize",
-        "laravel",
-        "compression"
+  "name": "pinimize/laravel-compression-and-archive",
+  "description": "A Laravel package for compression and archiving",
+  "keywords": [
+    "pinimize",
+    "laravel",
+    "compression"
+  ],
+  "homepage": "https://github.com/pinimize/laravel-compression-and-archive",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Einar Hansen",
+      "email": "einar@einarhansen.dev",
+      "homepage": "https://einarhansen.dev"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "illuminate/support": "^11.0",
+    "ext-zlib": "*",
+    "ext-zip": "*"
+  },
+  "require-dev": {
+    "driftingly/rector-laravel": "^1.2.1",
+    "guzzlehttp/guzzle": "^7.5",
+    "laravel/pint": "^1.17",
+    "orchestra/testbench": "^9.1.5",
+    "phpstan/extension-installer": "^1.1",
+    "phpstan/phpstan-deprecation-rules": "^1.0",
+    "phpstan/phpstan-phpunit": "^1.0",
+    "phpunit/phpunit": "^10.5|^11.0",
+    "symfony/var-dumper": "^7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Pinimize\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Pinimize\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Pinimize\\PinimizeServiceProvider"
+      ]
+    }
+  },
+  "scripts": {
+    "analyse": "@phpstan --configuration=phpstan.neon.dist --memory-limit=-1 analyse",
+    "format": [
+      "Composer\\Config::disableProcessTimeout",
+      "./vendor/bin/pint"
     ],
-    "homepage" : "https://github.com/pinimize/laravel-compression-and-archive",
-    "type": "library",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Einar Hansen",
-            "email": "einar@einarhansen.dev",
-            "homepage": "https://einarhansen.dev"
-        }
+    "phpstan": [
+      "Composer\\Config::disableProcessTimeout",
+      "./vendor/bin/phpstan"
     ],
-    "require": {
-        "php": "^8.2",
-        "illuminate/support": "^11.0"
-    },
-    "require-dev": {
-        "guzzlehttp/guzzle": "^7.5",
-        "laravel/pint": "^1.17",
-        "orchestra/testbench": "^9.1.5",
-        "phpstan/extension-installer": "^1.1",
-        "phpstan/phpstan-deprecation-rules": "^1.0",
-        "phpstan/phpstan-phpunit": "^1.0",
-        "phpunit/phpunit": "^10.5|^11.0",
-        "symfony/var-dumper": "^7.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "Pinimize\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Pinimize\\Tests\\": "tests/"
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Pinimize\\PinimizeServiceProvider"
-            ]
-        }
-    },
-    "scripts" : {
-        "analyse": "vendor/bin/phpstan analyse",
-        "format": "vendor/bin/pint",
-        "test": "vendor/bin/phpunit",
-        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
-    },
-    "config" : {
-        "sort-packages" : true,
-        "allow-plugins" : {
-            "phpstan/extension-installer" : true,
-            "pestphp/pest-plugin" : true
-        }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "phpstan:ci": "@phpstan --no-progress --error-format=github analyse",
+    "rector": [
+      "Composer\\Config::disableProcessTimeout",
+      "./vendor/bin/rector process"
+    ],
+    "rector:ci": "@rector --dry-run --ansi --no-progress-bar",
+    "test": "vendor/bin/phpunit",
+    "test-coverage": "vendor/bin/phpunit --coverage-html coverage.html --coverage-filter src/ tests coverage"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "phpstan/extension-installer": true,
+      "pestphp/pest-plugin": true
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }
