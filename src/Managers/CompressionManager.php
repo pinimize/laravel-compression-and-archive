@@ -30,6 +30,14 @@ class CompressionManager extends Manager
         return new GzipDriver($config);
     }
 
+    public function createZlibDriver(): CompressionContract
+    {
+        /** @var ZlibConfigArray $config */
+        $config = $this->getConfig('zlib');
+
+        return new ZlibDriver($config);
+    }
+
     /**
      * @return array<string, mixed>
      */
