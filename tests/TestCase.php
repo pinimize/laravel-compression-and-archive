@@ -1,0 +1,1 @@
+            'pinimize-archive' => Archive::class,

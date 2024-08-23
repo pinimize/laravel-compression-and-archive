@@ -1,0 +1,75 @@
+<?php
+
+namespace Pinimize\Tests\Providers;
+
+use Illuminate\Support\Facades\File;
+use PHPUnit\Framework\Attributes\Test;
+use Pinimize\Managers\ArchiveManager;
+use Pinimize\Managers\CompressionManager;
+use Pinimize\Managers\DecompressionManager;
+use Pinimize\Managers\UnarchiveManager;
+use Pinimize\Providers\PinimizeServiceProvider;
+use Pinimize\Tests\TestCase;
+
+class PinimizeServiceProviderTest extends TestCase
+{
+    protected PinimizeServiceProvider $provider;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Remove the published config file if it exists
+        if (File::exists(config_path('pinimize.php'))) {
+            File::delete(config_path('pinimize.php'));
+        }
+
+        // Create a new instance of the service provider
+        $this->provider = new PinimizeServiceProvider($this->app);
+    }
+
+    #[Test]
+    public function it_merges_the_config(): void
+    {
+        // Manually call register and boot methods
+        $this->provider->register();
+        $this->provider->boot();
+
+        // Assert that the config is merged
+        $this->assertNotNull(config('pinimize'));
+        $this->assertIsArray(config('pinimize'));
+
+        // You can add more specific assertions here, for example:
+        $this->assertArrayHasKey('compression', config('pinimize'));
+    }
+
+    #[Test]
+    public function it_registers_the_singletons(): void
+    {
+        // Manually call register method
+        $this->provider->register();
+
+        $this->assertInstanceOf(CompressionManager::class, $this->app->make('pinimize.compression'));
+    }
+
+    #[Test]
+    public function it_publishes_the_config_file(): void
+    {
+        // Manually call boot method
+        $this->provider->boot();
+
+        $this->artisan('vendor:publish', ['--provider' => PinimizeServiceProvider::class, '--tag' => 'pinimize-config']);
+
+        $this->assertFileExists(config_path('pinimize.php'));
+    }
+
+    protected function tearDown(): void
+    {
+        // Remove the published config file after tests
+        if (File::exists(config_path('pinimize.php'))) {
+            File::delete(config_path('pinimize.php'));
+        }
+
+        parent::tearDown();
+    }
+}
