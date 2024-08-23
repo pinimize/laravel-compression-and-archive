@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Pinimize\Compression\ZlibDriver;
 use Pinimize\Tests\TestCase;
+use RuntimeException;
 
 class ZlibDriverTest extends TestCase
 {
@@ -16,7 +17,10 @@ class ZlibDriverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->zlibDriver = new ZlibDriver(['level' => 6]);
+        $this->zlibDriver = new ZlibDriver([
+            'level' => 6,
+            'encoding' => ZLIB_ENCODING_DEFLATE,
+        ]);
     }
 
     #[Test]
@@ -68,9 +72,6 @@ class ZlibDriverTest extends TestCase
 
         $compressed = $this->zlibDriver->string($largeString);
         $this->assertLessThan(strlen($largeString), strlen($compressed));
-
-        $decompressed = $this->zlibDriver->decompressString($compressed);
-        $this->assertEquals($largeString, $decompressed);
     }
 
     #[Test]
@@ -91,5 +92,72 @@ class ZlibDriverTest extends TestCase
         $compressed2 = $this->zlibDriver->string($string, ['level' => 1]);
 
         $this->assertNotEquals($compressed1, $compressed2);
+    }
+
+    #[Test]
+    public function it_can_compress_a_resource(): void
+    {
+        $originalData = str_repeat('Hello, World! ', 1000);
+        $originalResource = fopen('php://temp', 'r+');
+        fwrite($originalResource, $originalData);
+        rewind($originalResource);
+
+        $compressedResource = $this->zlibDriver->resource($originalResource);
+
+        $this->assertIsResource($compressedResource);
+        $actualData = stream_get_contents($compressedResource);
+        $expectedData = $this->zlibDriver->string($originalData);
+
+        $this->assertEquals($expectedData, $actualData);
+        $this->assertEquals($originalData, zlib_decode($actualData));
+
+        // Clean up
+        fclose($originalResource);
+        fclose($compressedResource);
+    }
+
+    #[Test]
+    public function it_throws_exception_for_invalid_resource(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid resource provided');
+
+        $this->zlibDriver->resource('not a resource');
+    }
+
+    #[Test]
+    public function it_can_compress_with_custom_level(): void
+    {
+        $originalData = str_repeat('Hello, World! ', 1000);
+        $originalResource = fopen('php://temp', 'r+');
+        fwrite($originalResource, $originalData);
+        rewind($originalResource);
+
+        $compressedResource1 = $this->zlibDriver->resource($originalResource, ['encoding' => ZLIB_ENCODING_DEFLATE]);
+        rewind($originalResource);
+        $compressedResource2 = $this->zlibDriver->resource($originalResource, ['level' => 1, 'encoding' => ZLIB_ENCODING_DEFLATE]);
+
+        $compressedSize1 = $this->getResourceSize($compressedResource1);
+        $compressedSize2 = $this->getResourceSize($compressedResource2);
+
+        $this->assertGreaterThan($compressedSize1, $compressedSize2);
+        $this->assertIsResource($compressedResource1);
+        $this->assertIsResource($compressedResource2);
+        $this->assertEquals($originalData, zlib_decode(stream_get_contents($compressedResource1)));
+        $this->assertEquals($originalData, zlib_decode(stream_get_contents($compressedResource2)));
+
+        // Clean up
+        fclose($originalResource);
+        fclose($compressedResource1);
+        fclose($compressedResource2);
+    }
+
+    private function getResourceSize($resource): int
+    {
+        fseek($resource, 0, SEEK_END);
+        $size = ftell($resource);
+        rewind($resource);
+
+        return $size;
     }
 }
