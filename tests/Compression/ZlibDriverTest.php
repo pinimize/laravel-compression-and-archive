@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pinimize\Tests\Compression;
 
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Pinimize\Compression\ZlibDriver;
@@ -32,7 +33,7 @@ class ZlibDriverTest extends TestCase
     #[Test]
     public function it_can_get_config(): void
     {
-        $config = ['level' => 6, 'encoding' => ZLIB_ENCODING_DEFLATE];
+        $config = ['level' => 6, 'encoding' => ZLIB_ENCODING_DEFLATE, 'disk' => null];
         $zlibDriver = new ZlibDriver($config);
         $this->assertEquals($config, $zlibDriver->getConfig());
     }
@@ -217,6 +218,25 @@ class ZlibDriverTest extends TestCase
         // Clean up
         unlink($sourceFile);
         unlink($destFile);
+    }
+
+    #[Test]
+    public function it_can_compress_a_file_using_a_disk(): void
+    {
+        $storage = Storage::fake($disk = 'local');
+        $tempDir = sys_get_temp_dir();
+        $sourceFile = tempnam($tempDir, 'gzip_test_source');
+        $destFile = tempnam($tempDir, 'gzip_test_dest');
+
+        $originalData = str_repeat('Hello, World! ', 1000);
+        $storage->put($sourceFile, $originalData);
+
+        $result = $this->zlibDriver->file($sourceFile, $destFile, ['disk' => $disk]);
+
+        $this->assertTrue($result);
+        $this->assertTrue($storage->exists($destFile));
+        $this->assertLessThan($storage->size($sourceFile), $storage->size($destFile));
+        $this->assertEquals($originalData, zlib_decode($storage->get($destFile)));
     }
 
     #[Test]

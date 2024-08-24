@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pinimize\Tests\Compression;
 
 use ErrorException;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Pinimize\Compression\GzipDriver;
@@ -21,6 +22,7 @@ class GzipDriverTest extends TestCase
         $this->gzipDriver = new GzipDriver([
             'level' => 6,
             'encoding' => FORCE_GZIP,
+            'disk' => null,
         ]);
     }
 
@@ -69,7 +71,6 @@ class GzipDriverTest extends TestCase
 
         $compressed = $this->gzipDriver->string($largeContent);
         $this->assertLessThan(strlen($largeContent), strlen($compressed));
-
     }
 
     #[Test]
@@ -160,6 +161,7 @@ class GzipDriverTest extends TestCase
         $config = $this->gzipDriver->getConfig();
         $this->assertIsArray($config);
         $this->assertArrayHasKey('level', $config);
+        $this->assertArrayHasKey('disk', $config);
         $this->assertArrayHasKey('encoding', $config);
         $this->assertEquals(6, $config['level']);
         $this->assertEquals(FORCE_GZIP, $config['encoding']);
@@ -193,6 +195,25 @@ class GzipDriverTest extends TestCase
 
         unlink($sourceFile);
         unlink($destFile);
+    }
+
+    #[Test]
+    public function it_can_compress_a_file_using_a_disk(): void
+    {
+        $storage = Storage::fake($disk = 'local');
+        $tempDir = sys_get_temp_dir();
+        $sourceFile = tempnam($tempDir, 'gzip_test_source');
+        $destFile = tempnam($tempDir, 'gzip_test_dest');
+
+        $originalData = str_repeat('Hello, World! ', 1000);
+        $storage->put($sourceFile, $originalData);
+
+        $result = $this->gzipDriver->file($sourceFile, $destFile, ['disk' => $disk]);
+
+        $this->assertTrue($result);
+        $this->assertTrue($storage->exists($destFile));
+        $this->assertLessThan($storage->size($sourceFile), $storage->size($destFile));
+        $this->assertEquals($originalData, gzdecode($storage->get($destFile)));
     }
 
     #[Test]

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Pinimize\Contracts;
 
+use Illuminate\Http\File;
+use Illuminate\Http\UploadedFile;
+use Psr\Http\Message\StreamInterface;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
 interface CompressionContract
 {
     /**
@@ -34,6 +39,13 @@ interface CompressionContract
     public function resource($resource, array $options = []);
 
     public function download(string $path, ?string $name = null, array $headers = [], array $options = []): StreamedResponse;
+
+    /**
+     * Write compressed contents to a file specified by the path.
+     *
+     * @param  StreamInterface|File|UploadedFile|string|resource  $contents
+     */
+    public function put(string $path, $contents, array $options = []): bool;
 
     /**
      * Get the compression ratio between original and compressed data.

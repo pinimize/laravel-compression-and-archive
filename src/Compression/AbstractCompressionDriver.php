@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Pinimize\Compression;
 
+use Illuminate\Http\File;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Pinimize\Contracts\CompressionContract;
 use Pinimize\Support\Driver;
+use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -22,6 +26,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         return $this->config + [
             'level' => -1,
             'encoding' => $this->getDefaultEncoding(),
+            'disk' => null,
         ];
     }
 
@@ -51,7 +56,11 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 
     public function file(string $from, ?string $to = null, array $options = []): bool
     {
-        if (! file_exists($from)) {
+        if (is_string($options['disk'] ?? null) && ! Storage::disk($options['disk'])->exists($from)) {
+            throw new RuntimeException("File does not exist: {$from}");
+        }
+
+        if (($options['disk'] ?? null) === null && ! file_exists($from)) {
             throw new RuntimeException("Source file does not exist: {$from}");
         }
 
@@ -60,8 +69,11 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         }
 
         $options = $this->mergeWithConfig($options);
-        $sourceHandle = $this->openSourceFile($from);
-        $outStream = $this->createOutputStream($to);
+        $sourceHandle = $this->openSourceFile($from, $options);
+        if (is_string($to) && is_string($options['disk'] ?? null)) {
+            Storage::disk($options['disk'])->put($to, $this->resource($sourceHandle));
+        }
+        $outStream = $this->createOutputStream($to, $options);
 
         $this->compressStream($sourceHandle, $outStream, $options);
 
@@ -84,13 +96,113 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
     }
 
     /**
+     * Write compressed contents to a file specified by the path.
+     *
+     * @param  StreamInterface|File|UploadedFile|string|resource  $contents
+     */
+    public function put(string $path, $contents, array $options = []): bool
+    {
+        $options = $this->mergeWithConfig($options);
+
+        if (is_string($contents)) {
+            return $this->putString($path, $contents, $options);
+        }
+
+        if ($contents instanceof StreamInterface) {
+            return $this->putStream($path, $contents, $options);
+        }
+
+        if ($contents instanceof File || $contents instanceof UploadedFile) {
+            return $this->putFile($path, $contents, $options);
+        }
+
+        if (is_resource($contents)) {
+            return $this->putResource($path, $contents, $options);
+        }
+
+        throw new RuntimeException('Unsupported content type');
+    }
+
+    /**
+     * Write a compressed string to a file on disk.
+     */
+    protected function putString(string $path, string $contents, array $options): bool
+    {
+        $compressed = $this->string($contents, $options);
+        if (! is_string($options['disk'] ?? null)) {
+            return file_put_contents($path, $compressed) !== false;
+        }
+
+        return Storage::disk($options['disk'])->put($path, $compressed);
+    }
+
+    /**
+     * Write a compressed stream to a file.
+     */
+    protected function putStream(string $path, StreamInterface $stream, array $options): bool
+    {
+        $resource = $stream->detach();
+        if (! is_resource($resource)) {
+            throw new RuntimeException('Could not detach stream');
+        }
+
+        return $this->putResource($path, $resource, $options);
+    }
+
+    /**
+     * Write a compressed file to storage.
+     *
+     * @param  File|UploadedFile  $file
+     */
+    protected function putFile(string $path, $file, array $options): bool
+    {
+        $resource = fopen($file->getRealPath(), 'r');
+        if ($resource === false) {
+            throw new RuntimeException('Could not open file');
+        }
+
+        return $this->putResource($path, $resource, $options);
+    }
+
+    /**
+     * Write a compressed resource to a file.
+     *
+     * @param  resource  $resource
+     */
+    protected function putResource(string $path, $resource, array $options): bool
+    {
+        $compressedResource = $this->resource($resource, $options);
+        $success = false;
+
+        if (is_string($options['disk'] ?? null)) {
+            return Storage::disk($options['disk'])->writeStream($path, $compressedResource);
+        }
+
+        $outputResource = fopen($path, 'w');
+        if ($outputResource !== false) {
+            stream_copy_to_stream($compressedResource, $outputResource);
+            fclose($outputResource);
+            $success = true;
+        }
+
+        fclose($compressedResource);
+        fclose($resource);
+
+        return $success;
+    }
+
+    /**
      * Create a response that forces the user's browser to download the compressed file.
      *
      * @param  array  $options  Compression options
      */
     public function download(string $path, ?string $name = null, array $headers = [], array $options = []): StreamedResponse
     {
-        if (! file_exists($path)) {
+        if (is_string($options['disk'] ?? null) && ! Storage::disk($options['disk'])->exists($path)) {
+            throw new RuntimeException("File does not exist: {$path}");
+        }
+
+        if (($options['disk'] ?? null) === null && ! file_exists($path)) {
             throw new RuntimeException("File does not exist: {$path}");
         }
 
@@ -103,7 +215,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         ], $headers);
 
         return new StreamedResponse(function () use ($path, $options): void {
-            $sourceStream = $this->openSourceFile($path);
+            $sourceStream = $this->openSourceFile($path, $options);
             $compressedStream = $this->resource($sourceStream, $options);
             fpassthru($compressedStream);
             fclose($sourceStream);
@@ -115,8 +227,12 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 
     abstract public function getFileExtension(): string;
 
-    protected function openSourceFile(string $source)
+    protected function openSourceFile(string $source, array $options = [])
     {
+        if (is_string($options['disk'] ?? null)) {
+            return Storage::disk($options['disk'])->readStream($source);
+        }
+
         $sourceHandle = fopen($source, 'rb');
         if ($sourceHandle === false) {
             throw new RuntimeException("Failed to open source file: {$source}");
@@ -125,7 +241,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         return $sourceHandle;
     }
 
-    protected function createOutputStream(?string $destination = null)
+    protected function createOutputStream(?string $destination = null, array $options = [])
     {
         try {
             $outStream = ($destination === null)
