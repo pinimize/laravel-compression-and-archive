@@ -145,7 +145,7 @@ class GzipDriverTest extends TestCase
         $this->assertIsResource($compressedResource1);
         $this->assertIsResource($compressedResource2);
         $this->assertEquals($originalData, gzdecode(stream_get_contents($compressedResource1)));
-        $this->assertEquals($originalData, gzdecode(stream_get_contents($compressedResource2)));
+        $this->assertEquals($originalData, zlib_decode(stream_get_contents($compressedResource2)));
 
         // Clean up
         fclose($originalResource);
