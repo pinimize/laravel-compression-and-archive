@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Pinimize\Tests\Compression;
 
+use GuzzleHttp\Psr7\Stream;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Pinimize\Compression\AbstractCompressionDriver;
 use Pinimize\Tests\TestCase;
-use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 use stdClass;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -185,9 +184,7 @@ class AbstractCompressionDriverTest extends TestCase
         rewind($resource);
         $path = sys_get_temp_dir().'/compression_test_'.uniqid().'.txt';
 
-        $stream = $this->mock(StreamInterface::class, function (MockInterface $mock) use ($resource): void {
-            $mock->shouldReceive('detach')->once()->andReturn($resource);
-        });
+        $stream = new Stream($resource);
 
         $result = $this->compressionDriver->put($path, $stream);
 
@@ -210,9 +207,7 @@ class AbstractCompressionDriverTest extends TestCase
         rewind($resource);
         $path = uniqid().'.txt';
 
-        $stream = $this->mock(StreamInterface::class, function (MockInterface $mock) use ($resource): void {
-            $mock->shouldReceive('detach')->once()->andReturn($resource);
-        });
+        $stream = new Stream($resource);
         $result = $this->compressionDriver->put($path, $stream, ['disk' => $disk]);
 
         $this->assertTrue($result);
@@ -330,7 +325,7 @@ class AbstractCompressionDriverTest extends TestCase
     {
         $storage = Storage::fake($disk = 'local');
 
-        $largeContent = str_repeat('Large content ', 10000); // About 130KB of data
+        $largeContent = str_repeat('Large content ', 1000000); // About 13MB of data
         $path = 'large_file.txt';
 
         $result = $this->compressionDriver->put($path, $largeContent, ['disk' => $disk]);

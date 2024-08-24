@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pinimize\Compression;
 
+use GuzzleHttp\Psr7\StreamWrapper;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -141,7 +142,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
      */
     protected function putStream(string $path, StreamInterface $stream, array $options): bool
     {
-        $resource = $stream->detach();
+        $resource = StreamWrapper::getResource($stream);
         if (! is_resource($resource)) {
             throw new RuntimeException('Could not detach stream');
         }
