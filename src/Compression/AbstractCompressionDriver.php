@@ -52,8 +52,9 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
     public function file(string $from, ?string $to = null, array $options = []): bool
     {
         if (! file_exists($from)) {
-            throw new RuntimeException("Source file does not exist: $from");
+            throw new RuntimeException("Source file does not exist: {$from}");
         }
+
         if ($to === null) {
             $to = Str::finish($from, '.'.$this->getFileExtension());
         }
@@ -82,6 +83,34 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         return 1 - ($compressedSize / $originalSize);
     }
 
+    /**
+     * Create a response that forces the user's browser to download the compressed file.
+     *
+     * @param  array  $options  Compression options
+     */
+    public function download(string $path, ?string $name = null, array $headers = [], array $options = []): StreamedResponse
+    {
+        if (! file_exists($path)) {
+            throw new RuntimeException("File does not exist: {$path}");
+        }
+
+        $name ??= basename($path).'.'.$this->getFileExtension();
+        $disposition = 'attachment; filename="'.addcslashes($name, '"').'"';
+
+        $headers = array_merge([
+            'Content-Type' => 'application/octet-stream',
+            'Content-Disposition' => $disposition,
+        ], $headers);
+
+        return new StreamedResponse(function () use ($path, $options): void {
+            $sourceStream = $this->openSourceFile($path);
+            $compressedStream = $this->resource($sourceStream, $options);
+            fpassthru($compressedStream);
+            fclose($sourceStream);
+            fclose($compressedStream);
+        }, 200, $headers);
+    }
+
     abstract public function getSupportedAlgorithms(): array;
 
     abstract public function getFileExtension(): string;
@@ -90,7 +119,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
     {
         $sourceHandle = fopen($source, 'rb');
         if ($sourceHandle === false) {
-            throw new RuntimeException("Failed to open source file: $source");
+            throw new RuntimeException("Failed to open source file: {$source}");
         }
 
         return $sourceHandle;
@@ -108,8 +137,8 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
             }
 
             return $outStream;
-        } catch (Throwable $e) {
-            throw new RuntimeException('Failed to open output stream: '.$e->getMessage(), 0, $e);
+        } catch (Throwable $throwable) {
+            throw new RuntimeException('Failed to open output stream: '.$throwable->getMessage(), 0, $throwable);
         }
     }
 

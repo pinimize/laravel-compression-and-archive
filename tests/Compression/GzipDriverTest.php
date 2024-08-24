@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pinimize\Tests\Compression;
 
+use ErrorException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Pinimize\Compression\GzipDriver;
@@ -213,8 +214,8 @@ class GzipDriverTest extends TestCase
         $this->expectExceptionMessage('Failed to open output stream');
 
         // Set up error handling to convert warnings to exceptions
-        set_error_handler(function ($severity, $message, $file, $line) {
-            throw new RuntimeException($message, $severity, new \ErrorException($message, 0, $severity, $file, $line));
+        set_error_handler(function ($severity, $message, $file, $line): void {
+            throw new RuntimeException($message, $severity, new ErrorException($message, 0, $severity, $file, $line));
         });
 
         try {

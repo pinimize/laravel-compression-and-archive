@@ -6,16 +6,17 @@ namespace Pinimize\Tests\Compression;
 
 use PHPUnit\Framework\TestCase;
 use Pinimize\Compression\AbstractCompressionDriver;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AbstractCompressionDriverTest extends TestCase
 {
-    private $driver;
+    private AbstractCompressionDriver $compressionDriver;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->driver = new class(['level' => -1]) extends AbstractCompressionDriver
+        $this->compressionDriver = new class(['level' => -1]) extends AbstractCompressionDriver
         {
             public function getDefaultEncoding(): int
             {
@@ -39,55 +40,55 @@ class AbstractCompressionDriverTest extends TestCase
         };
     }
 
-    public function testDownloadReturnsStreamedResponse()
+    public function testDownloadReturnsStreamedResponse(): void
     {
         $path = __DIR__.'/../Fixtures/data.csv';
 
-        $response = $this->driver->download($path);
+        $streamedResponse = $this->compressionDriver->download($path);
 
-        $this->assertInstanceOf(StreamedResponse::class, $response);
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('application/octet-stream', $response->headers->get('Content-Type'));
-        $this->assertEquals('attachment; filename="data.csv.compressed"', $response->headers->get('Content-Disposition'));
+        $this->assertInstanceOf(StreamedResponse::class, $streamedResponse);
+        $this->assertEquals(200, $streamedResponse->getStatusCode());
+        $this->assertEquals('application/octet-stream', $streamedResponse->headers->get('Content-Type'));
+        $this->assertEquals('attachment; filename="data.csv.compressed"', $streamedResponse->headers->get('Content-Disposition'));
 
         ob_start();
-        $response->sendContent();
+        $streamedResponse->sendContent();
         $content = ob_get_clean();
 
         $this->assertEquals(
-            zlib_encode(file_get_contents($path), $this->driver->getConfig()['encoding']),
+            zlib_encode(file_get_contents($path), $this->compressionDriver->getConfig()['encoding']),
             $content,
         );
     }
 
-    public function testDownloadWithCustomNameAndHeaders()
+    public function testDownloadWithCustomNameAndHeaders(): void
     {
-        $path = __DIR__.'/fixtures/test.txt';
-        file_put_contents($path, 'Test content');
+        $path = __DIR__.'/../Fixtures/data.csv';
 
-        $response = $this->driver->download($path, 'custom.txt', ['X-Custom-Header' => 'Value']);
+        $streamedResponse = $this->compressionDriver->download($path, 'custom.csv', ['X-Custom-Header' => 'Value']);
 
-        $this->assertEquals('attachment; filename="custom.txt"', $response->headers->get('Content-Disposition'));
-        $this->assertEquals('Value', $response->headers->get('X-Custom-Header'));
+        $this->assertEquals('attachment; filename="custom.csv"', $streamedResponse->headers->get('Content-Disposition'));
+        $this->assertEquals('Value', $streamedResponse->headers->get('X-Custom-Header'));
 
         ob_start();
-        $response->sendContent();
+        $streamedResponse->sendContent();
         $content = ob_get_clean();
 
-        $this->assertEquals('compressed_Test content', $content);
-
-        unlink($path);
+        $this->assertEquals(
+            zlib_encode(file_get_contents($path), $this->compressionDriver->getConfig()['encoding']),
+            $content,
+        );
     }
 
-    public function testDownloadNonExistentFile()
+    public function testDownloadNonExistentFile(): void
     {
-        $this->expectException(\RuntimeException::class);
-        $this->driver->download('non_existent_file.txt');
+        $this->expectException(RuntimeException::class);
+        $this->compressionDriver->download('non_existent_file.txt');
     }
 
-    public function testDownloadWithCompressionOptions()
+    public function testDownloadWithCompressionOptions(): void
     {
-        $path = __DIR__.'/fixtures/test.txt';
+        $path = __DIR__.'/../Fixtures/test.txt';
         file_put_contents($path, 'Test content');
 
         $driver = new class(['level' => -1]) extends AbstractCompressionDriver
@@ -124,10 +125,10 @@ class AbstractCompressionDriverTest extends TestCase
             }
         };
 
-        $response = $driver->download($path, null, [], ['level' => 9]);
+        $streamedResponse = $driver->download($path, null, [], ['level' => 9]);
 
         ob_start();
-        $response->sendContent();
+        $streamedResponse->sendContent();
         $content = ob_get_clean();
 
         $this->assertEquals('compressed_with_options_Test content', $content);

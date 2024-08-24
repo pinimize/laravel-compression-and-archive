@@ -33,6 +33,8 @@ interface CompressionContract
      */
     public function resource($resource, array $options = []);
 
+    public function download(string $path, ?string $name = null, array $headers = [], array $options = []): StreamedResponse;
+
     /**
      * Get the compression ratio between original and compressed data.
      *
