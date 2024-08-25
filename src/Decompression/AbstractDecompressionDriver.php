@@ -19,6 +19,9 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
 {
     use ResourceHelpersTrait;
 
+    /**
+     * @param  array<string, scalar|null>  $config
+     */
     public function __construct(protected array $config) {}
 
     /**
@@ -144,7 +147,15 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
         }, 200, $headers);
     }
 
+    /**
+     * @param  array<string, scalar|null>  $options
+     */
     abstract protected function decompressString(string $string, array $options): string;
 
+    /**
+     * @param  resource  $input
+     * @param  resource  $output
+     * @param  array<string, scalar|null>  $options
+     */
     abstract protected function decompressStream($input, $output, array $options): void;
 }

@@ -19,6 +19,9 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 {
     use ResourceHelpersTrait;
 
+    /**
+     * @param  array<string, scalar|null>  $config
+     */
     public function __construct(protected array $config) {}
 
     /**
@@ -162,7 +165,12 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 
     abstract public function getFileExtension(): string;
 
-    protected function compressStream($input, $output, array $options)
+    /**
+     * @param  resource  $input
+     * @param  resource  $output
+     * @param  array<string, scalar|null>  $options
+     */
+    protected function compressStream($input, $output, array $options): void
     {
         $level = $options['level'] ?? -1;
         $encoding = $options['encoding'] ?? $this->getDefaultEncoding();

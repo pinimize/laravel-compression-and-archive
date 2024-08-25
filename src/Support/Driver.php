@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Pinimize\Support;
 
-/**
- * @property array<string, scalar|null> $config
- */
 abstract class Driver
 {
+    /**
+     * @var array<string, scalar|null>
+     */
+    protected array $config;
+
     abstract public function getDefaultEncoding(): int;
 
     /**

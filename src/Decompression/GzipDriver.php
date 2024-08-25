@@ -8,6 +8,14 @@ use ErrorException;
 use Pinimize\Exceptions\InvalidCompressedDataException;
 use RuntimeException;
 
+/**
+ * @phpstan-type GzipConfigArray  array{
+ *     level: int,
+ *     encoding: int,
+ *     disk: string|null,
+ *     max_length: int|null
+ * }
+ */
 class GzipDriver extends AbstractDecompressionDriver
 {
     public function getDefaultEncoding(): int
@@ -29,6 +37,9 @@ class GzipDriver extends AbstractDecompressionDriver
         }
     }
 
+    /**
+     * @param  array<string, scalar|null>  $options
+     */
     protected function decompressStream($input, $output, array $options): void
     {
         $inflateContext = inflate_init(ZLIB_ENCODING_GZIP);
