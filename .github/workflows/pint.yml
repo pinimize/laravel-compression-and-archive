@@ -26,7 +26,6 @@ jobs:
         with:
           preset: laravel
           testMode: true
-          useComposer: true
           verboseMode: true
 
       - name: Commit changes
