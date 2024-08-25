@@ -18,7 +18,7 @@
   ],
   "require": {
     "php": "^8.2",
-    "illuminate/support": "^11.0",
+    "illuminate/contracts": "^11.0",
     "ext-zlib": "*",
     "ext-zip": "*"
   },
