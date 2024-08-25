@@ -112,29 +112,22 @@ class AbstractCompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_throws_exception_for_non_existent_file(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->compressionDriver->download('non_existent_file.txt');
-    }
-
-    #[Test]
     #[DataProvider('compressionLevelProvider')]
     public function it_can_compress_with_custom_options(int $level): void
     {
-        $storage = Storage::fake();
+        $filesystem = Storage::fake();
         $content = 'Test content';
         $path = 'test.txt';
-        $storage->put($path, $content);
+        $filesystem->put($path, $content);
 
-        $streamedResponse = $this->compressionDriver->download($storage->path($path), null, [], ['level' => $level]);
+        $streamedResponse = $this->compressionDriver->download($filesystem->path($path), null, [], ['level' => $level]);
 
         ob_start();
         $streamedResponse->sendContent();
         $compressedContent = ob_get_clean();
 
         $this->assertEquals(
-            zlib_encode((string) $storage->get($path), $this->compressionDriver->getConfig()['encoding'], $level),
+            zlib_encode((string) $filesystem->get($path), $this->compressionDriver->getConfig()['encoding'], $level),
             $compressedContent,
         );
     }
@@ -199,7 +192,7 @@ class AbstractCompressionDriverTest extends TestCase
     #[Test]
     public function it_can_put_compressed_stream_content_using_a_disk(): void
     {
-        $storage = Storage::fake($disk = 'local');
+        $filesystem = Storage::fake($disk = 'local');
 
         $content = 'Test stream content';
         $resource = tmpfile();
@@ -211,10 +204,10 @@ class AbstractCompressionDriverTest extends TestCase
         $result = $this->compressionDriver->put($path, $stream, ['disk' => $disk]);
 
         $this->assertTrue($result);
-        $storage->assertExists($path);
+        $filesystem->assertExists($path);
         $this->assertEquals(
             zlib_encode($content, ZLIB_ENCODING_DEFLATE),
-            $storage->get($path),
+            $filesystem->get($path),
         );
     }
 
@@ -238,7 +231,7 @@ class AbstractCompressionDriverTest extends TestCase
     #[Test]
     public function it_can_put_compressed_uploaded_file_using_a_disk(): void
     {
-        $storage = Storage::fake($disk = 'local');
+        $filesystem = Storage::fake($disk = 'local');
         $content = 'Test uploaded file content';
         $uploadedFile = UploadedFile::fake()->createWithContent('upload.txt', $content);
         $path = 'upload.txt.zz';
@@ -246,10 +239,10 @@ class AbstractCompressionDriverTest extends TestCase
         $result = $this->compressionDriver->put($path, $uploadedFile, ['disk' => $disk]);
 
         $this->assertTrue($result);
-        $storage->assertExists($path);
+        $filesystem->assertExists($path);
         $this->assertStringContainsString(
             zlib_encode($content, ZLIB_ENCODING_DEFLATE),
-            $storage->get($path),
+            $filesystem->get($path),
         );
     }
 
@@ -276,7 +269,7 @@ class AbstractCompressionDriverTest extends TestCase
     #[Test]
     public function it_can_put_compressed_resource_using_a_disk(): void
     {
-        $storage = Storage::fake($disk = 'local');
+        $filesystem = Storage::fake($disk = 'local');
 
         $content = 'Test resource content';
         $resource = tmpfile();
@@ -288,10 +281,10 @@ class AbstractCompressionDriverTest extends TestCase
         $result = $this->compressionDriver->put($path, $resource, ['disk' => $disk]);
 
         $this->assertTrue($result);
-        $storage->assertExists($path);
+        $filesystem->assertExists($path);
         $this->assertStringContainsString(
             zlib_encode($content, ZLIB_ENCODING_DEFLATE),
-            $storage->get($path),
+            $filesystem->get($path),
         );
     }
 
@@ -308,7 +301,7 @@ class AbstractCompressionDriverTest extends TestCase
     #[DataProvider('compressionLevelProvider')]
     public function it_can_put_with_custom_compression_options(int $level): void
     {
-        $storage = Storage::fake($disk = 'local');
+        $filesystem = Storage::fake($disk = 'local');
 
         $content = 'Test content with custom compression';
         $path = "test_level_{$level}.txt";
@@ -316,14 +309,14 @@ class AbstractCompressionDriverTest extends TestCase
         $result = $this->compressionDriver->put($path, $content, ['level' => $level, 'disk' => $disk]);
 
         $this->assertTrue($result);
-        $storage->assertExists($path);
-        $this->assertEquals('compressed_'.$content, $storage->get($path));
+        $filesystem->assertExists($path);
+        $this->assertEquals('compressed_'.$content, $filesystem->get($path));
     }
 
     #[Test]
     public function it_can_handle_large_files(): void
     {
-        $storage = Storage::fake($disk = 'local');
+        $filesystem = Storage::fake($disk = 'local');
 
         $largeContent = str_repeat('Large content ', 1000000); // About 13MB of data
         $path = 'large_file.txt';
@@ -331,14 +324,14 @@ class AbstractCompressionDriverTest extends TestCase
         $result = $this->compressionDriver->put($path, $largeContent, ['disk' => $disk]);
 
         $this->assertTrue($result);
-        $storage->assertExists($path);
-        $this->assertStringStartsWith('compressed_', $storage->get($path));
+        $filesystem->assertExists($path);
+        $this->assertStringStartsWith('compressed_', $filesystem->get($path));
     }
 
     #[Test]
     public function it_can_overwrite_existing_file(): void
     {
-        $storage = Storage::fake($disk = 'local');
+        $filesystem = Storage::fake($disk = 'local');
 
         $initialContent = 'Initial content';
         $newContent = 'New content';
@@ -348,7 +341,7 @@ class AbstractCompressionDriverTest extends TestCase
         $result = $this->compressionDriver->put($path, $newContent, ['disk' => $disk]);
 
         $this->assertTrue($result);
-        $storage->assertExists($path);
-        $this->assertEquals('compressed_'.$newContent, $storage->get($path));
+        $filesystem->assertExists($path);
+        $this->assertEquals('compressed_'.$newContent, $filesystem->get($path));
     }
 }

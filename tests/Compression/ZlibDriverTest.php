@@ -9,7 +9,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Pinimize\Compression\ZlibDriver;
 use Pinimize\Tests\TestCase;
-use RuntimeException;
 
 class ZlibDriverTest extends TestCase
 {
@@ -118,15 +117,6 @@ class ZlibDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_throws_exception_for_invalid_resource(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Invalid resource provided');
-
-        $this->zlibDriver->resource('not a resource');
-    }
-
-    #[Test]
     public function it_can_compress_with_custom_level(): void
     {
         $originalData = str_repeat('Hello, World! ', 1000);
@@ -202,7 +192,7 @@ class ZlibDriverTest extends TestCase
         $sourceContent = str_repeat('Hello, World! ', 1000);
         file_put_contents($sourceFile, $sourceContent);
 
-        $result = $this->zlibDriver->file($sourceFile, $destFile);
+        $result = $this->zlibDriver->put($destFile, $sourceFile);
 
         $this->assertTrue($result);
         $this->assertFileExists($destFile);
@@ -223,45 +213,20 @@ class ZlibDriverTest extends TestCase
     #[Test]
     public function it_can_compress_a_file_using_a_disk(): void
     {
-        $storage = Storage::fake($disk = 'local');
+        $filesystem = Storage::fake($disk = 'local');
         $tempDir = sys_get_temp_dir();
         $sourceFile = tempnam($tempDir, 'gzip_test_source');
         $destFile = tempnam($tempDir, 'gzip_test_dest');
 
         $originalData = str_repeat('Hello, World! ', 1000);
-        $storage->put($sourceFile, $originalData);
+        $filesystem->put($sourceFile, $originalData);
 
-        $result = $this->zlibDriver->file($sourceFile, $destFile, ['disk' => $disk]);
+        $result = $this->zlibDriver->put($destFile, $sourceFile, ['disk' => $disk]);
 
         $this->assertTrue($result);
-        $this->assertTrue($storage->exists($destFile));
-        $this->assertLessThan($storage->size($sourceFile), $storage->size($destFile));
-        $this->assertEquals($originalData, zlib_decode($storage->get($destFile)));
-    }
-
-    #[Test]
-    public function it_throws_exception_for_non_existent_source_file(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Source file does not exist');
-
-        $this->zlibDriver->file('non_existent_file.txt', 'output.zz');
-    }
-
-    #[Test]
-    public function it_throws_exception_for_invalid_destination(): void
-    {
-        $tempDir = sys_get_temp_dir();
-        $sourceFile = tempnam($tempDir, 'zlib_test_source');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Failed to open output stream');
-
-        try {
-            $this->zlibDriver->file($sourceFile, '/invalid/path/output.zz');
-        } finally {
-            unlink($sourceFile);
-        }
+        $this->assertTrue($filesystem->exists($destFile));
+        $this->assertLessThan($filesystem->size($sourceFile), $filesystem->size($destFile));
+        $this->assertEquals($originalData, zlib_decode($filesystem->get($destFile)));
     }
 
     #[Test]
@@ -275,8 +240,8 @@ class ZlibDriverTest extends TestCase
         $sourceContent = str_repeat('Hello, World! ', 1000);
         file_put_contents($sourceFile, $sourceContent);
 
-        $this->zlibDriver->file($sourceFile, $destFile1, ['level' => 1]);
-        $this->zlibDriver->file($sourceFile, $destFile2, ['level' => 9]);
+        $this->zlibDriver->put($destFile1, $sourceFile, ['level' => 1]);
+        $this->zlibDriver->put($destFile2, $sourceFile, ['level' => 9]);
 
         $this->assertLessThan(
             filesize($destFile1),

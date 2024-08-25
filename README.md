@@ -55,13 +55,6 @@ Compression::file('source.txt', 'compressed.gz', [
     'disk' => 'local',
 ]);
 
-Compression::file('source.txt', 'compressed.gz', [
-    'disk' => [
-        'source' => 'local',
-        'destination' => 's3',
-    ]
-]);
-
 // Compress from a PHP resoruces
 $resource = fopen('source.txt', 'r');
 Compression::resource($resource, 'compressed.gz', 's3');

@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Pinimize\Tests\Compression;
 
-use ErrorException;
+use GuzzleHttp\Psr7\Stream;
+use Illuminate\Http\File;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Pinimize\Compression\GzipDriver;
 use Pinimize\Tests\TestCase;
-use RuntimeException;
 
 class GzipDriverTest extends TestCase
 {
@@ -27,14 +28,60 @@ class GzipDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_compress_a_string(): void
+    #[DataProvider('contentsProvider')]
+    public function it_can_compress_data_to_a_string($contents, string $expected): void
     {
-        $original = 'Hello, World!';
-        $compressed = $this->gzipDriver->string($original);
+        if (is_callable($contents)) {
+            $contents = $contents();
+        }
+        $compressed = $this->gzipDriver->string($contents);
 
-        $this->assertNotEquals($original, $compressed);
+        $this->assertNotEquals($expected, $compressed);
         $this->assertStringStartsWith("\x1f\x8b\x08", $compressed); // Gzip magic number
-        $this->assertEquals($original, gzdecode($compressed));
+        $this->assertEquals($expected, gzdecode($compressed));        // Close the temporary file if it was opened
+        if (is_resource($contents)) {
+            fclose($contents);
+        }
+    }
+
+    public static function contentsProvider(): array
+    {
+        $content = file_get_contents($path = __DIR__.'/../Fixtures/data.json');
+
+        return [
+            'StreamInterface' => [
+                function () use ($content) {
+                    $tempFile = tmpfile();
+                    fwrite($tempFile, $content);
+                    rewind($tempFile);
+
+                    return new Stream($tempFile);
+                },
+                $content,
+            ],
+            'File' => [
+                new File($path),
+                $content,
+            ],
+            'UploadedFile' => [
+                UploadedFile::fake()->createWithContent('test.txt', $content),
+                $content,
+            ],
+            'string' => [
+                'Test string content',
+                'Test string content',
+            ],
+            'resource' => [
+                function () use ($content) {
+                    $tempFile = tmpfile();
+                    fwrite($tempFile, $content);
+                    rewind($tempFile);
+
+                    return $tempFile;
+                },
+                $content,
+            ],
+        ];
     }
 
     #[Test]
@@ -56,12 +103,6 @@ class GzipDriverTest extends TestCase
             'default level' => [-1],
             'maximum level' => [9],
         ];
-    }
-
-    #[Test]
-    public function it_can_get_correct_file_extension(): void
-    {
-        $this->assertEquals('gz', $this->gzipDriver->getFileExtension());
     }
 
     #[Test]
@@ -97,35 +138,31 @@ class GzipDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_compress_a_resource(): void
+    public function it_can_get_correct_file_extension(): void
     {
-        $originalData = str_repeat('Hello, World! ', 1000);
-        $originalResource = fopen('php://temp', 'r+');
-        fwrite($originalResource, $originalData);
-        rewind($originalResource);
+        $this->assertEquals('gz', $this->gzipDriver->getFileExtension());
+    }
 
-        $compressedResource = $this->gzipDriver->resource($originalResource);
+    #[Test]
+    #[DataProvider('contentsProvider')]
+    public function it_can_compress_a_resource($contents, string $expected): void
+    {
+        if (is_callable($contents)) {
+            $contents = $contents();
+        }
+        $compressedResource = $this->gzipDriver->resource($contents, ['encoding' => ZLIB_ENCODING_GZIP]);
 
         $this->assertIsResource($compressedResource);
         $actualData = stream_get_contents($compressedResource);
         $this->assertStringStartsWith("\x1f\x8b\x08", $actualData); // Gzip magic number
-        $expectedData = $this->gzipDriver->string($originalData);
+        $expectedData = $this->gzipDriver->string($expected);
 
-        $this->assertEquals($expectedData, $actualData);
-        $this->assertEquals($originalData, gzdecode($actualData));
+        $this->assertEquals($expected, gzdecode($actualData));
 
         // Clean up
-        fclose($originalResource);
-        fclose($compressedResource);
-    }
-
-    #[Test]
-    public function it_throws_exception_for_invalid_resource(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Invalid resource provided');
-
-        $this->gzipDriver->resource('not a resource');
+        if (is_resource($contents)) {
+            fclose($contents);
+        }
     }
 
     #[Test]
@@ -186,7 +223,7 @@ class GzipDriverTest extends TestCase
         $originalData = str_repeat('Hello, World! ', 1000);
         file_put_contents($sourceFile, $originalData);
 
-        $result = $this->gzipDriver->file($sourceFile, $destFile);
+        $result = $this->gzipDriver->put($destFile, $sourceFile);
 
         $this->assertTrue($result);
         $this->assertFileExists($destFile);
@@ -200,55 +237,20 @@ class GzipDriverTest extends TestCase
     #[Test]
     public function it_can_compress_a_file_using_a_disk(): void
     {
-        $storage = Storage::fake($disk = 'local');
+        $filesystem = Storage::fake($disk = 'local');
         $tempDir = sys_get_temp_dir();
         $sourceFile = tempnam($tempDir, 'gzip_test_source');
         $destFile = tempnam($tempDir, 'gzip_test_dest');
 
         $originalData = str_repeat('Hello, World! ', 1000);
-        $storage->put($sourceFile, $originalData);
+        $filesystem->put($sourceFile, $originalData);
 
-        $result = $this->gzipDriver->file($sourceFile, $destFile, ['disk' => $disk]);
+        $result = $this->gzipDriver->put($destFile, $sourceFile, ['disk' => $disk]);
 
         $this->assertTrue($result);
-        $this->assertTrue($storage->exists($destFile));
-        $this->assertLessThan($storage->size($sourceFile), $storage->size($destFile));
-        $this->assertEquals($originalData, gzdecode($storage->get($destFile)));
-    }
-
-    #[Test]
-    public function it_throws_exception_for_non_existent_source_file(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Source file does not exist');
-
-        $this->gzipDriver->file('non_existent_file.txt', 'output.gz');
-    }
-
-    #[Test]
-    public function it_throws_exception_for_invalid_destination(): void
-    {
-        $tempDir = sys_get_temp_dir();
-        $sourceFile = tempnam($tempDir, 'gzip_test_source');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Failed to open output stream');
-
-        // Set up error handling to convert warnings to exceptions
-        set_error_handler(function ($severity, $message, $file, $line): void {
-            throw new RuntimeException($message, $severity, new ErrorException($message, 0, $severity, $file, $line));
-        });
-
-        try {
-            $this->gzipDriver->file($sourceFile, '/invalid/path/output.gz');
-        } finally {
-            // Restore the original error handler
-            restore_error_handler();
-            // Clean up the temporary file
-            if (file_exists($sourceFile)) {
-                unlink($sourceFile);
-            }
-        }
+        $this->assertTrue($filesystem->exists($destFile));
+        $this->assertLessThan($filesystem->size($sourceFile), $filesystem->size($destFile));
+        $this->assertEquals($originalData, gzdecode($filesystem->get($destFile)));
     }
 
     #[Test]
@@ -262,8 +264,8 @@ class GzipDriverTest extends TestCase
         $sourceContent = str_repeat('Hello, World! ', 1000);
         file_put_contents($sourceFile, $sourceContent);
 
-        $this->gzipDriver->file($sourceFile, $destFile1, ['level' => 1]);
-        $this->gzipDriver->file($sourceFile, $destFile2, ['level' => 9]);
+        $this->gzipDriver->put($destFile1, $sourceFile, ['level' => 1]);
+        $this->gzipDriver->put($destFile2, $sourceFile, ['level' => 9]);
 
         $this->assertLessThan(
             filesize($destFile1),

@@ -8,8 +8,16 @@ abstract class Driver
 {
     abstract public function getConfig(): array;
 
-    public function mergeWithConfig(array $options): array
+    /**
+     * @param  string|array<string, scalar|null>  $options
+     * @return array<string, scalar|null>
+     */
+    public function parseOptions(string|array $options): array
     {
+        if (is_string($options)) {
+            $options = ['disk' => $options];
+        }
+
         return $options + $this->getConfig();
     }
 }

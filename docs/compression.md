@@ -51,7 +51,7 @@ return [
 <a name="compressing-strings"></a>
 ### Compressing Strings
 
-To compress a string, you can use the `string` method:
+To compress data to a string, you can use the `string` method.
 
 ```php
 use Illuminate\Support\Facades\Compression;

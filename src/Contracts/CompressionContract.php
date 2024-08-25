@@ -12,49 +12,47 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 interface CompressionContract
 {
     /**
-     * Compress a string.
+     * Compress data and return the compress data as a string.
      *
-     * @param  string  $string  The string to compress
-     * @param  array  $options  Additional options for compression
-     * @return string The compressed string
+     * @param  StreamInterface|File|UploadedFile|string|resource  $contents
+     * @param  string|array<string, scalar|null>  $options
      */
-    public function string(string $string, array $options = []): string;
+    public function string($contents, string|array $options = []): string;
 
     /**
-     * Compress a file.
+     * Get a PHP resource of the compressed data.
      *
-     * @param  array  $options  Additional options for compression
-     * @return bool Boolean indicating success
+     * @param  StreamInterface|File|UploadedFile|string|resource  $contents
+     * @param  string|array<string, scalar|null>  $options
+     * @return resource
      */
-    public function file(string $from, ?string $to = null, array $options = []): bool;
-
-    /**
-     * Compress a resource.
-     *
-     * @param  resource  $resource  The resource to compress
-     * @param  string|null  $destination  Path to the destination file (optional)
-     * @param  array  $options  Additional options for compression
-     * @return resource|bool The compressed resource or boolean indicating success
-     */
-    public function resource($resource, array $options = []);
-
-    public function download(string $path, ?string $name = null, array $headers = [], array $options = []): StreamedResponse;
+    public function resource($contents, string|array $options = []);
 
     /**
      * Write compressed contents to a file specified by the path.
      *
      * @param  StreamInterface|File|UploadedFile|string|resource  $contents
+     * @param  string|array<string, scalar|null>  $options
      */
-    public function put(string $path, $contents, array $options = []): bool;
+    public function put(string $path, $contents, string|array $options = []): bool;
+
+    /**
+     * Compress and create a streamed download response for a given file.
+     *
+     * @param  array<string, scalar>  $headers
+     * @param  string|array<string, scalar|null>  $options
+     */
+    public function download(string $path, ?string $name = null, array $headers = [], string|array $options = []): StreamedResponse;
 
     /**
      * Get the compression ratio between original and compressed data.
      *
      * @param  string  $original  Path to the original file
      * @param  string  $compressed  Path to the compressed file
+     * @param  string|array<string, scalar|null>  $options
      * @return float The compression ratio
      */
-    public function getRatio(string $original, string $compressed, array $options = []): float;
+    public function getRatio(string $original, string $compressed, string|array $options = []): float;
 
     /**
      * Get the list of supported compression algorithms.
