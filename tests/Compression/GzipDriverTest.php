@@ -219,9 +219,8 @@ class GzipDriverTest extends TestCase
     public function it_can_compress_a_file(): void
     {
         $tempDir = sys_get_temp_dir();
-        $sourceFile = tempnam($tempDir, 'gzip_test_source');
-        $destFile = tempnam($tempDir, 'gzip_test_dest');
-
+        $sourceFile = $tempDir.'/gzip_test_source.txt';
+        $destFile = $tempDir.'/gzip_test_dest.txt.gz';
         $originalData = str_repeat('Hello, World! ', 1000);
         file_put_contents($sourceFile, $originalData);
 
@@ -240,9 +239,8 @@ class GzipDriverTest extends TestCase
     public function it_can_compress_a_file_using_a_disk(): void
     {
         $filesystem = Storage::fake($disk = 'local');
-        $tempDir = sys_get_temp_dir();
-        $sourceFile = tempnam($tempDir, 'gzip_test_source');
-        $destFile = tempnam($tempDir, 'gzip_test_dest');
+        $sourceFile = '/gzip_test_source.txt';
+        $destFile = '/gzip_test_dest.txt.gz';
 
         $originalData = str_repeat('Hello, World! ', 1000);
         $filesystem->put($sourceFile, $originalData);
