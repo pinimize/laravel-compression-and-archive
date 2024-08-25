@@ -160,11 +160,11 @@ class AbstractDecompressionDriverTest extends TestCase
         $filesystem = Storage::fake('local');
         $filesystem->put('compressed.txt', 'Compressed Data');
 
-        $response = $this->decompressionDriver->download('compressed.txt', 'decompressed.txt', [], 'local');
+        $streamedResponse = $this->decompressionDriver->download('compressed.txt', 'decompressed.txt', [], 'local');
 
-        $this->assertInstanceOf(StreamedResponse::class, $response);
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('attachment; filename="decompressed.txt"', $response->headers->get('Content-Disposition'));
+        $this->assertInstanceOf(StreamedResponse::class, $streamedResponse);
+        $this->assertEquals(200, $streamedResponse->getStatusCode());
+        $this->assertEquals('attachment; filename="decompressed.txt"', $streamedResponse->headers->get('Content-Disposition'));
     }
 
     #[Test]
@@ -195,7 +195,7 @@ class AbstractDecompressionDriverTest extends TestCase
         $result = $this->decompressionDriver->string($resource);
 
         $this->assertStringStartsWith('Decompressed: Large compressed data.', $result);
-        $this->assertEquals(strlen($largeData) + 14, strlen((string) $result)); // 14 is the length of 'Decompressed: '
+        $this->assertEquals(strlen($largeData) + 14, strlen($result)); // 14 is the length of 'Decompressed: '
 
         fclose($resource);
     }
