@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Pinimize\Compression;
+namespace Pinimize\Decompression;
 
 use GuzzleHttp\Psr7\StreamWrapper;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Pinimize\Contracts\CompressionContract;
+use Pinimize\Contracts\DecompressionContract;
 use Pinimize\Support\Driver;
 use Pinimize\Support\ResourceHelpersTrait;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-abstract class AbstractCompressionDriver extends Driver implements CompressionContract
+abstract class AbstractDecompressionDriver extends Driver implements DecompressionContract
 {
     use ResourceHelpersTrait;
 
@@ -29,7 +29,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         $options = $this->parseOptions($options);
 
         if (is_string($contents)) {
-            return $this->compressString($contents, (int) $options['level'], $options['encoding']);
+            return $this->decompressString($contents, $options);
         }
         if ($contents instanceof File || $contents instanceof UploadedFile) {
             $contents = fopen($contents->getRealPath(), 'r');
@@ -72,8 +72,9 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         if (! is_resource($contents)) {
             throw new RuntimeException('Invalid resource provided');
         }
+
         $outStream = $this->createOutputStream();
-        $this->compressStream($contents, $outStream, $options);
+        $this->decompressStream($contents, $outStream, $options);
 
         rewind($outStream);
 
@@ -96,6 +97,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 
             $contents = $disk === null ? fopen($contents, 'r') : Storage::disk($disk)->readStream($contents);
         }
+
         if ($contents instanceof StreamInterface) {
             return $this->putStream($path, $contents, $options);
         }
@@ -116,6 +118,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
      */
     public function download(string $path, ?string $name = null, array $headers = [], string|array $options = []): StreamedResponse
     {
+        $options = $this->parseOptions($options);
         if (is_string($options['disk'] ?? null) && ! Storage::disk($options['disk'])->exists($path)) {
             throw new RuntimeException("File does not exist: {$path}");
         }
@@ -124,7 +127,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
             throw new RuntimeException("File does not exist: {$path}");
         }
 
-        $name ??= basename($path).'.'.$this->getFileExtension();
+        $name ??= basename($path);
         $disposition = 'attachment; filename="'.addcslashes($name, '"').'"';
 
         $headers = array_merge([
@@ -134,55 +137,14 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 
         return new StreamedResponse(function () use ($path, $options): void {
             $sourceStream = $this->openSourceFile($path, $options);
-            $compressedStream = $this->resource($sourceStream, $options);
-            fpassthru($compressedStream);
+            $decompressedStream = $this->resource($sourceStream, $options);
+            fpassthru($decompressedStream);
             fclose($sourceStream);
-            fclose($compressedStream);
+            fclose($decompressedStream);
         }, 200, $headers);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function getRatio(string $original, string $compressed, string|array $options = []): float
-    {
-        $originalSize = strlen($original);
-        $compressedSize = strlen($compressed);
+    abstract protected function decompressString(string $string, array $options): string;
 
-        if ($originalSize === 0) {
-            return 0.0;
-        }
-
-        return 1 - ($compressedSize / $originalSize);
-    }
-
-    abstract protected function compressString(string $string, int $level, int $encoding): string;
-
-    abstract public function getSupportedAlgorithms(): array;
-
-    abstract public function getFileExtension(): string;
-
-    protected function compressStream($input, $output, array $options)
-    {
-        $level = $options['level'] ?? -1;
-        $encoding = $options['encoding'] ?? $this->getDefaultEncoding();
-
-        $deflateContext = deflate_init($encoding, ['level' => $level]);
-        if ($deflateContext === false) {
-            throw new RuntimeException('Failed to initialize deflate context');
-        }
-
-        while (! feof($input)) {
-            $chunk = fread($input, 8192);
-            if ($chunk === false) {
-                throw new RuntimeException('Failed to read from input stream');
-            }
-
-            $compressed = deflate_add($deflateContext, $chunk, ZLIB_NO_FLUSH);
-            fwrite($output, $compressed);
-        }
-
-        $compressed = deflate_add($deflateContext, '', ZLIB_FINISH);
-        fwrite($output, $compressed);
-    }
+    abstract protected function decompressStream($input, $output, array $options): void;
 }

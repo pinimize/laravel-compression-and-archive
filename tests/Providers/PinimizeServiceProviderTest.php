@@ -50,6 +50,7 @@ class PinimizeServiceProviderTest extends TestCase
         $this->provider->register();
 
         $this->assertInstanceOf(CompressionManager::class, $this->app->make('pinimize.compression'));
+        $this->assertInstanceOf(DecompressionManager::class, $this->app->make('pinimize.decompression'));
     }
 
     #[Test]

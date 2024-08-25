@@ -7,6 +7,7 @@ namespace Pinimize\Providers;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
 use Pinimize\Managers\CompressionManager;
+use Pinimize\Managers\DecompressionManager;
 
 class PinimizeServiceProvider extends ServiceProvider
 {
@@ -18,6 +19,8 @@ class PinimizeServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../../config/pinimize.php', 'pinimize');
 
         $this->app->singleton('pinimize.compression', fn (Container $container): CompressionManager => new CompressionManager($container));
+
+        $this->app->singleton('pinimize.decompression', fn (Container $container): DecompressionManager => new DecompressionManager($container));
     }
 
     /**
