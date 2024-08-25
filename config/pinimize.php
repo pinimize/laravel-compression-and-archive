@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use Pinimize\Archive\TarDriver;
-use Pinimize\Archive\ZipDriver;
-
 return [
     /*
     |--------------------------------------------------------------------------

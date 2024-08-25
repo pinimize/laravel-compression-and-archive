@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace Pinimize\Compression;
 
+/**
+ * @phpstan-type ZlibConfigArray  array{
+ *     level: int,
+ *     encoding: int,
+ *     disk: string|null,
+ *     max_length: int|null
+ * }
+ */
 class ZlibDriver extends AbstractCompressionDriver
 {
     public function getDefaultEncoding(): int

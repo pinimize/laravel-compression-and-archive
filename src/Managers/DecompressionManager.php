@@ -17,7 +17,7 @@ use Pinimize\Decompression\ZlibDriver;
  */
 class DecompressionManager extends Manager
 {
-    public function getDefaultDriver()
+    public function getDefaultDriver(): string
     {
         return $this->config->get('pinimize.compression.default', 'gzip');
     }

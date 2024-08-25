@@ -19,6 +19,9 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
 {
     use ResourceHelpersTrait;
 
+    /**
+     * @param  array<string, scalar|null>  $config
+     */
     public function __construct(protected array $config) {}
 
     /**
@@ -31,12 +34,15 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
         if (is_string($contents)) {
             return $this->decompressString($contents, $options);
         }
+
         if ($contents instanceof File || $contents instanceof UploadedFile) {
             $contents = fopen($contents->getRealPath(), 'r');
         }
+
         if ($contents instanceof StreamInterface) {
             $contents = StreamWrapper::getResource($contents);
         }
+
         if (is_resource($contents)) {
             return stream_get_contents($this->resource($contents, $options));
         }
@@ -55,6 +61,7 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
         if ($contents instanceof File || $contents instanceof UploadedFile) {
             $contents = fopen($contents->getRealPath(), 'r');
         }
+
         if (is_string($contents)) {
             $isFilepath = is_string($disk) ? Storage::disk($disk)->exists($contents) : file_exists($contents);
             if ($isFilepath) {
@@ -66,9 +73,11 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
                 $contents = $resource;
             }
         }
+
         if ($contents instanceof StreamInterface) {
             $contents = StreamWrapper::getResource($contents);
         }
+
         if (! is_resource($contents)) {
             throw new RuntimeException('Invalid resource provided');
         }
@@ -144,7 +153,15 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
         }, 200, $headers);
     }
 
+    /**
+     * @param  array<string, scalar|null>  $options
+     */
     abstract protected function decompressString(string $string, array $options): string;
 
+    /**
+     * @param  resource  $input
+     * @param  resource  $output
+     * @param  array<string, scalar|null>  $options
+     */
     abstract protected function decompressStream($input, $output, array $options): void;
 }

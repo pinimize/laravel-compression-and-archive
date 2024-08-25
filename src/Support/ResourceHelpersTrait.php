@@ -16,6 +16,8 @@ trait ResourceHelpersTrait
 {
     /**
      * Write a compressed string to a file on disk.
+     *
+     * @param  array<string, scalar|null>  $options
      */
     protected function putString(string $path, string $contents, array $options): bool
     {
@@ -27,7 +29,10 @@ trait ResourceHelpersTrait
         return Storage::disk($options['disk'])->put($path, $compressed);
     }
 
-    protected function putFile(string $path, $file, array $options): bool
+    /**
+     * @param  array<string, scalar|null>  $options
+     */
+    protected function putFile(string $path, File|UploadedFile $file, array $options): bool
     {
         $resource = fopen($file->getRealPath(), 'r');
         if ($resource === false) {
@@ -37,6 +42,9 @@ trait ResourceHelpersTrait
         return $this->putResource($path, $resource, $options);
     }
 
+    /**
+     * @param  array<string, scalar|null>  $options
+     */
     protected function putStream(string $path, StreamInterface $stream, array $options): bool
     {
         $resource = StreamWrapper::getResource($stream);
@@ -47,6 +55,10 @@ trait ResourceHelpersTrait
         return $this->putResource($path, $resource, $options);
     }
 
+    /**
+     * @param  resource  $resource
+     * @param  array<string, scalar|null>  $options
+     */
     protected function putResource(string $path, $resource, array $options): bool
     {
         $processedResource = $this->resource($resource, $options);
@@ -69,6 +81,10 @@ trait ResourceHelpersTrait
         return $success;
     }
 
+    /**
+     * @param  array<string, scalar|null>  $options
+     * @return resource
+     */
     protected function openSourceFile(string $source, array $options = [])
     {
         if (is_string($options['disk'] ?? null)) {
@@ -83,6 +99,12 @@ trait ResourceHelpersTrait
         return $sourceHandle;
     }
 
+    /**
+     * @param  array<string, scalar|null>  $options
+     * @return resource
+     *
+     * @throws RuntimeException
+     */
     protected function createOutputStream(?string $destination = null, array $options = [])
     {
         try {
@@ -98,37 +120,5 @@ trait ResourceHelpersTrait
         } catch (Throwable $throwable) {
             throw new RuntimeException('Failed to open output stream: '.$throwable->getMessage(), 0, $throwable);
         }
-    }
-
-    protected function prepareContents($contents, array $options)
-    {
-        $disk = $options['disk'] ?? null;
-
-        if ($contents instanceof StreamInterface) {
-            return StreamWrapper::getResource($contents);
-        }
-
-        if ($contents instanceof File || $contents instanceof UploadedFile) {
-            return fopen($contents->getRealPath(), 'r');
-        }
-
-        if (is_string($contents)) {
-            $isFilepath = is_string($disk) ? Storage::disk($disk)->exists($contents) : file_exists($contents);
-            if ($isFilepath) {
-                return $disk === null ? fopen($contents, 'r') : Storage::disk($disk)->readStream($contents);
-            } else {
-                $resource = fopen('php://memory', 'r+');
-                fwrite($resource, $contents);
-                rewind($resource);
-
-                return $resource;
-            }
-        }
-
-        if (is_resource($contents)) {
-            return $contents;
-        }
-
-        throw new RuntimeException('Invalid contents provided');
     }
 }

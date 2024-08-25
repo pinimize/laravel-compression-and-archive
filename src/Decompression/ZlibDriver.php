@@ -6,7 +6,16 @@ namespace Pinimize\Decompression;
 
 use ErrorException;
 use Pinimize\Exceptions\InvalidCompressedDataException;
+use RuntimeException;
 
+/**
+ * @phpstan-type ZlibConfigArray  array{
+ *     level: int,
+ *     encoding: int,
+ *     disk: string|null,
+ *     max_length: int|null
+ * }
+ */
 class ZlibDriver extends AbstractDecompressionDriver
 {
     public function getDefaultEncoding(): int
@@ -14,6 +23,11 @@ class ZlibDriver extends AbstractDecompressionDriver
         return ZLIB_ENCODING_DEFLATE;
     }
 
+    /**
+     * @param  array<string, scalar|null>  $options
+     *
+     * @throws InvalidCompressedDataException
+     */
     protected function decompressString(string $string, array $options): string
     {
         try {
@@ -23,6 +37,11 @@ class ZlibDriver extends AbstractDecompressionDriver
         }
     }
 
+    /**
+     * @param  array<string, scalar|null>  $options
+     *
+     * @throws RuntimeException
+     */
     protected function decompressStream($input, $output, array $options): void
     {
         $encoding = $options['encoding'] ?? $this->getDefaultEncoding();

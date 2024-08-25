@@ -186,9 +186,8 @@ class ZlibDriverTest extends TestCase
     public function it_can_compress_file(): void
     {
         $tempDir = sys_get_temp_dir();
-        $sourceFile = tempnam($tempDir, 'zlib_test_source');
-        $destFile = tempnam($tempDir, 'zlib_test_dest');
-
+        $sourceFile = $tempDir.'/zlib_test_source.txt';
+        $destFile = $tempDir.'/zlib_test_dest.txt.zz';
         $sourceContent = str_repeat('Hello, World! ', 1000);
         file_put_contents($sourceFile, $sourceContent);
 
@@ -214,9 +213,8 @@ class ZlibDriverTest extends TestCase
     public function it_can_compress_a_file_using_a_disk(): void
     {
         $filesystem = Storage::fake($disk = 'local');
-        $tempDir = sys_get_temp_dir();
-        $sourceFile = tempnam($tempDir, 'gzip_test_source');
-        $destFile = tempnam($tempDir, 'gzip_test_dest');
+        $sourceFile = '/zlib_test_source.txt';
+        $destFile = '/zlib_test_dest.txt.zz';
 
         $originalData = str_repeat('Hello, World! ', 1000);
         $filesystem->put($sourceFile, $originalData);

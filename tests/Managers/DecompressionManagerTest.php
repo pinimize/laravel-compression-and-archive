@@ -50,15 +50,15 @@ class DecompressionManagerTest extends TestCase
     #[Test]
     public function it_can_create_gzip_driver(): void
     {
-        $compressionContract = $this->decompressionManager->createGzipDriver();
-        $this->assertInstanceOf(GzipDriver::class, $compressionContract);
+        $gzipDriver = $this->decompressionManager->createGzipDriver();
+        $this->assertInstanceOf(GzipDriver::class, $gzipDriver);
     }
 
     #[Test]
     public function it_can_create_zlib_driver(): void
     {
-        $compressionContract = $this->decompressionManager->createZlibDriver();
-        $this->assertInstanceOf(ZlibDriver::class, $compressionContract);
+        $zlibDriver = $this->decompressionManager->createZlibDriver();
+        $this->assertInstanceOf(ZlibDriver::class, $zlibDriver);
     }
 
     #[Test]

@@ -19,6 +19,9 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 {
     use ResourceHelpersTrait;
 
+    /**
+     * @param  array<string, scalar|null>  $config
+     */
     public function __construct(protected array $config) {}
 
     /**
@@ -31,12 +34,15 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         if (is_string($contents)) {
             return $this->compressString($contents, (int) $options['level'], $options['encoding']);
         }
+
         if ($contents instanceof File || $contents instanceof UploadedFile) {
             $contents = fopen($contents->getRealPath(), 'r');
         }
+
         if ($contents instanceof StreamInterface) {
             $contents = StreamWrapper::getResource($contents);
         }
+
         if (is_resource($contents)) {
             return stream_get_contents($this->resource($contents, $options));
         }
@@ -55,6 +61,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
         if ($contents instanceof File || $contents instanceof UploadedFile) {
             $contents = fopen($contents->getRealPath(), 'r');
         }
+
         if (is_string($contents)) {
             $isFilepath = is_string($disk) ? Storage::disk($disk)->exists($contents) : file_exists($contents);
             if ($isFilepath) {
@@ -66,12 +73,15 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
                 $contents = $resource;
             }
         }
+
         if ($contents instanceof StreamInterface) {
             $contents = StreamWrapper::getResource($contents);
         }
+
         if (! is_resource($contents)) {
             throw new RuntimeException('Invalid resource provided');
         }
+
         $outStream = $this->createOutputStream();
         $this->compressStream($contents, $outStream, $options);
 
@@ -96,6 +106,7 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 
             $contents = $disk === null ? fopen($contents, 'r') : Storage::disk($disk)->readStream($contents);
         }
+
         if ($contents instanceof StreamInterface) {
             return $this->putStream($path, $contents, $options);
         }
@@ -162,7 +173,12 @@ abstract class AbstractCompressionDriver extends Driver implements CompressionCo
 
     abstract public function getFileExtension(): string;
 
-    protected function compressStream($input, $output, array $options)
+    /**
+     * @param  resource  $input
+     * @param  resource  $output
+     * @param  array<string, scalar|null>  $options
+     */
+    protected function compressStream($input, $output, array $options): void
     {
         $level = $options['level'] ?? -1;
         $encoding = $options['encoding'] ?? $this->getDefaultEncoding();
