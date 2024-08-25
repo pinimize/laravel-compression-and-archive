@@ -19,8 +19,9 @@
   "require": {
     "php": "^8.2",
     "illuminate/contracts": "^11.0",
-    "ext-zlib": "*",
-    "ext-zip": "*"
+    "ext-fileinfo": "*",
+    "ext-zip": "*",
+    "ext-zlib": "*"
   },
   "require-dev": {
     "driftingly/rector-laravel": "^1.2.1",
