@@ -1,4 +1,4 @@
-name: Fix PHP code style issues
+name: Larvel Pint
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
           testMode: true
           useComposer: true
           verboseMode: true
-          
+
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
