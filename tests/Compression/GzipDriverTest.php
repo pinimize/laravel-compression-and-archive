@@ -34,6 +34,7 @@ class GzipDriverTest extends TestCase
         if (is_callable($contents)) {
             $contents = $contents();
         }
+
         $compressed = $this->gzipDriver->string($contents);
 
         $this->assertNotEquals($expected, $compressed);
@@ -50,7 +51,7 @@ class GzipDriverTest extends TestCase
 
         return [
             'StreamInterface' => [
-                function () use ($content) {
+                function () use ($content): Stream {
                     $tempFile = tmpfile();
                     fwrite($tempFile, $content);
                     rewind($tempFile);
@@ -150,12 +151,13 @@ class GzipDriverTest extends TestCase
         if (is_callable($contents)) {
             $contents = $contents();
         }
+
         $compressedResource = $this->gzipDriver->resource($contents, ['encoding' => ZLIB_ENCODING_GZIP]);
 
         $this->assertIsResource($compressedResource);
         $actualData = stream_get_contents($compressedResource);
         $this->assertStringStartsWith("\x1f\x8b\x08", $actualData); // Gzip magic number
-        $expectedData = $this->gzipDriver->string($expected);
+        $this->gzipDriver->string($expected);
 
         $this->assertEquals($expected, gzdecode($actualData));
 

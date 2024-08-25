@@ -4,10 +4,8 @@ namespace Pinimize\Tests\Providers;
 
 use Illuminate\Support\Facades\File;
 use PHPUnit\Framework\Attributes\Test;
-use Pinimize\Managers\ArchiveManager;
 use Pinimize\Managers\CompressionManager;
 use Pinimize\Managers\DecompressionManager;
-use Pinimize\Managers\UnarchiveManager;
 use Pinimize\Providers\PinimizeServiceProvider;
 use Pinimize\Tests\TestCase;
 

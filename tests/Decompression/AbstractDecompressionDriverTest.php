@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AbstractDecompressionDriverTest extends TestCase
 {
-    private $decompressionDriver;
+    private AbstractDecompressionDriver $decompressionDriver;
 
     protected function setUp(): void
     {
@@ -49,14 +49,14 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_decompress_a_string_to_string()
+    public function it_can_decompress_a_string_to_string(): void
     {
         $result = $this->decompressionDriver->string('Compressed Data');
         $this->assertEquals('Decompressed: Compressed Data', $result);
     }
 
     #[Test]
-    public function it_can_decompress_a_resource_to_string()
+    public function it_can_decompress_a_resource_to_string(): void
     {
         $resource = fopen('php://temp', 'r+');
         fwrite($resource, 'Compressed Data');
@@ -69,7 +69,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_decompress_a_string_to_a_resource()
+    public function it_can_decompress_a_string_to_a_resource(): void
     {
         $result = $this->decompressionDriver->resource('Compressed Data');
         $this->assertIsResource($result);
@@ -77,7 +77,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_decompress_a_resource_to_a_resource()
+    public function it_can_decompress_a_resource_to_a_resource(): void
     {
         $resource = fopen('php://temp', 'r+');
         fwrite($resource, 'Compressed Data');
@@ -91,7 +91,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_decompress_a_string_to_a_file()
+    public function it_can_decompress_a_string_to_a_file(): void
     {
         $path = sys_get_temp_dir().'/decompressed.txt';
         $result = $this->decompressionDriver->put($path, 'Compressed Data');
@@ -102,20 +102,20 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_decompress_a_string_to_a_file_using_a_disk()
+    public function it_can_decompress_a_string_to_a_file_using_a_disk(): void
     {
         // Mock the filesystem operations
-        $storage = Storage::fake('local');
+        $filesystem = Storage::fake('local');
 
         $result = $this->decompressionDriver->put('decompressed.txt', 'Compressed Data', 'local');
 
         $this->assertTrue($result);
-        $storage->assertExists('decompressed.txt');
-        $this->assertEquals('Decompressed: Compressed Data', $storage->get('decompressed.txt'));
+        $filesystem->assertExists('decompressed.txt');
+        $this->assertEquals('Decompressed: Compressed Data', $filesystem->get('decompressed.txt'));
     }
 
     #[Test]
-    public function it_can_decompress_an_uploaded_file()
+    public function it_can_decompress_an_uploaded_file(): void
     {
         $file = UploadedFile::fake()->create('test.txt', 100);
         $file->storeAs('', 'test.txt', ['disk' => 'local']);
@@ -126,7 +126,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_decompress_a_file_instance()
+    public function it_can_decompress_a_file_instance(): void
     {
         $filePath = sys_get_temp_dir().'/test_file.txt';
         file_put_contents($filePath, 'Compressed Data');
@@ -138,7 +138,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_throws_exception_for_invalid_input()
+    public function it_throws_exception_for_invalid_input(): void
     {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Invalid contents provided');
@@ -147,7 +147,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_decompress_using_custom_options()
+    public function it_can_decompress_using_custom_options(): void
     {
         $result = $this->decompressionDriver->string('Compressed Data', ['encoding' => ZLIB_ENCODING_GZIP]);
 
@@ -155,10 +155,10 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_download_a_decompressed_file()
+    public function it_can_download_a_decompressed_file(): void
     {
-        $storage = Storage::fake('local');
-        $storage->put('compressed.txt', 'Compressed Data');
+        $filesystem = Storage::fake('local');
+        $filesystem->put('compressed.txt', 'Compressed Data');
 
         $response = $this->decompressionDriver->download('compressed.txt', 'decompressed.txt', [], 'local');
 
@@ -168,7 +168,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_throws_exception_when_downloading_non_existent_file()
+    public function it_throws_exception_when_downloading_non_existent_file(): void
     {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('File does not exist: non_existent.txt');
@@ -177,7 +177,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_handle_empty_input()
+    public function it_can_handle_empty_input(): void
     {
         $result = $this->decompressionDriver->string('');
 
@@ -185,7 +185,7 @@ class AbstractDecompressionDriverTest extends TestCase
     }
 
     #[Test]
-    public function it_can_decompress_large_data()
+    public function it_can_decompress_large_data(): void
     {
         $largeData = str_repeat('Large compressed data. ', 1000);
         $resource = fopen('php://temp', 'r+');
@@ -195,13 +195,13 @@ class AbstractDecompressionDriverTest extends TestCase
         $result = $this->decompressionDriver->string($resource);
 
         $this->assertStringStartsWith('Decompressed: Large compressed data.', $result);
-        $this->assertEquals(strlen($largeData) + 14, strlen($result)); // 14 is the length of 'Decompressed: '
+        $this->assertEquals(strlen($largeData) + 14, strlen((string) $result)); // 14 is the length of 'Decompressed: '
 
         fclose($resource);
     }
 
     #[Test]
-    public function it_respects_config_options()
+    public function it_respects_config_options(): void
     {
         $customDriver = new class(['level' => 6, 'encoding' => ZLIB_ENCODING_GZIP]) extends AbstractDecompressionDriver
         {

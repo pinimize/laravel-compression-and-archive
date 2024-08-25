@@ -34,12 +34,15 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
         if (is_string($contents)) {
             return $this->decompressString($contents, $options);
         }
+
         if ($contents instanceof File || $contents instanceof UploadedFile) {
             $contents = fopen($contents->getRealPath(), 'r');
         }
+
         if ($contents instanceof StreamInterface) {
             $contents = StreamWrapper::getResource($contents);
         }
+
         if (is_resource($contents)) {
             return stream_get_contents($this->resource($contents, $options));
         }
@@ -58,6 +61,7 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
         if ($contents instanceof File || $contents instanceof UploadedFile) {
             $contents = fopen($contents->getRealPath(), 'r');
         }
+
         if (is_string($contents)) {
             $isFilepath = is_string($disk) ? Storage::disk($disk)->exists($contents) : file_exists($contents);
             if ($isFilepath) {
@@ -69,9 +73,11 @@ abstract class AbstractDecompressionDriver extends Driver implements Decompressi
                 $contents = $resource;
             }
         }
+
         if ($contents instanceof StreamInterface) {
             $contents = StreamWrapper::getResource($contents);
         }
+
         if (! is_resource($contents)) {
             throw new RuntimeException('Invalid resource provided');
         }
