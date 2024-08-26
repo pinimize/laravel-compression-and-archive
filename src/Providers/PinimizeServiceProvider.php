@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Pinimize\Providers;
 
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Pinimize\Managers\CompressionManager;
 use Pinimize\Managers\DecompressionManager;
+use Pinimize\Mixins\StorageCompressionMixin;
 use Pinimize\Mixins\StringCompressionMixin;
 
 class PinimizeServiceProvider extends ServiceProvider
@@ -38,6 +40,7 @@ class PinimizeServiceProvider extends ServiceProvider
 
         if (config('pinimize.compression.mixin')) {
             Str::mixin(new StringCompressionMixin);
+            Storage::mixin(new StorageCompressionMixin);
         }
     }
 }
