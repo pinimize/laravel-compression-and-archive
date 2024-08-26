@@ -11,15 +11,15 @@ class StringCompressionMixin
 {
     public function compress()
     {
-        return function ($string) {
-            return Compression::string($string);
+        return function ($string, $driver = null) {
+            return Compression::driver($driver)->string($string);
         };
     }
 
     public function decompress()
     {
-        return function ($string) {
-            return Decompression::string($string);
+        return function ($string, $driver = null) {
+            return Decompression::driver($driver)->string($string);
         };
     }
 }
