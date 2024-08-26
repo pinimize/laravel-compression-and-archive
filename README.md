@@ -36,6 +36,7 @@ Archiving and unarchiving operations are in **coming very soon**.
 - [Environment Variables](#environment-variables)
 - [Basic Usage](#basic-usage)
     - [String Macros](#string-macros)
+    - [Storage Macros](#storage-macros)
     - [Compressing Strings](#compressing-strings)
     - [Compressing Resources](#compressing-resources)
     - [Compressing Files](#compressing-files)
@@ -176,6 +177,92 @@ $decompressedStringZlib = Str::decompress($compressedStringZlib, 'zlib');
 ```
 
 These macros provide a simple and convenient way to compress and decompress strings in your Laravel application, leveraging the power of the Pinimize package.
+
+### Storage Macros
+
+The Pinimize package extends Laravel's `Storage` facade with two convenient methods for file compression and decompression:
+
+#### Compression:
+
+```php
+use Illuminate\Support\Facades\Storage;
+
+Storage::compress(
+    string $source,
+    ?string $destination = null,
+    bool $deleteSource = false,
+    ?string $driver = null
+): bool|string;
+```
+
+#### Parameters:
+
+- `$source`: The path to the source file (relative to the storage disk).
+- `$destination`: (Optional) The path where the compressed file should be saved. If null, it will use the source filepath with the extension appended.
+- `$deleteSource`: (Optional) Whether to delete the source file after successful compression. Defaults to `false`.
+- `$driver`: (Optional) The compression driver to use (e.g., 'gzip', 'zlib'). If null, it will use the default driver.
+
+#### Return Value:
+
+- If `$destination` is provided: Returns `true` on success, `false` on failure.
+- If `$destination` is null: Returns the path of the compressed file on success, `false` on failure.
+
+#### Decompression:
+
+```php
+use Illuminate\Support\Facades\Storage;
+
+Storage::decompress(
+    string $source,
+    ?string $destination = null,
+    bool $deleteSource = false,
+    ?string $driver = null
+): string|bool;
+```
+
+#### Parameters:
+
+- `$source`: The path to the compressed file (relative to the storage disk).
+- `$destination`: (Optional) The path where the decompressed file should be saved. If null, it will use `$source` with the compression extension removed.
+- `$deleteSource`: (Optional) Whether to delete the source file after successful decompression. Defaults to `false`.
+- `$driver`: (Optional) The decompression driver to use (e.g., 'gzip', 'zlib'). If null, it will use the default driver.
+
+#### Return Value:
+
+- If `$destination` is provided: Returns `true` on success, `false` on failure.
+- If `$destination` is null: Returns the path of the decompressed file on success, `false` on failure.
+
+### Examples:
+
+```php
+use Illuminate\Support\Facades\Storage;
+
+// Compress a file with default settings
+$compressResult = Storage::compress('large_file.txt');
+if ($compressResult !== false) {
+    echo "File compressed successfully to: $compressResult\n";
+}
+
+// Compress a file with custom destination and driver
+$compressResult = Storage::compress('document.pdf', 'compressed_doc.pdf.gz', false, 'zlib');
+if ($compressResult === true) {
+    echo "File compressed successfully\n";
+}
+
+// Decompress a file with default settings
+$decompressResult = Storage::decompress('large_file.txt.gz');
+if ($decompressResult !== false) {
+    echo "File decompressed successfully to: $decompressResult\n";
+}
+
+// Decompress a file, delete the source, and use a specific driver
+$decompressResult = Storage::decompress('archive.tar.gz', 'extracted_archive.tar', true, 'gzip');
+if ($decompressResult === true) {
+    echo "File decompressed and compressed version deleted\n";
+}
+```
+
+These methods provide a simple and convenient way to compress and decompress files in your Laravel application's storage system, leveraging the power of the Pinimize package.
 
 ### Compressing Strings
 
