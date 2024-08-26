@@ -6,8 +6,10 @@ namespace Pinimize\Providers;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Pinimize\Managers\CompressionManager;
 use Pinimize\Managers\DecompressionManager;
+use Pinimize\Mixins\StringCompressionMixin;
 
 class PinimizeServiceProvider extends ServiceProvider
 {
@@ -28,8 +30,14 @@ class PinimizeServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->publishes([
-            __DIR__.'/../../config/pinimize.php' => config_path('pinimize.php'),
-        ], 'pinimize-config');
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../../config/pinimize.php' => config_path('pinimize.php'),
+            ], 'pinimize-config');
+        }
+
+        if (config('pinimize.compression.mixin')) {
+            Str::mixin(new StringCompressionMixin);
+        }
     }
 }

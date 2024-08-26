@@ -3,6 +3,7 @@
 namespace Pinimize\Tests\Providers;
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Pinimize\Managers\CompressionManager;
 use Pinimize\Managers\DecompressionManager;
@@ -60,6 +61,30 @@ class PinimizeServiceProviderTest extends TestCase
         $this->artisan('vendor:publish', ['--provider' => PinimizeServiceProvider::class, '--tag' => 'pinimize-config']);
 
         $this->assertFileExists(config_path('pinimize.php'));
+    }
+
+    #[Test]
+    public function it_registers_compression_mixin_when_enabled(): void
+    {
+        putenv('COMPRESSION_REGISTER_MIXIN=true');
+        Str::flushMacros();
+        $this->refreshApplication();
+
+        $this->assertTrue(config('pinimize.compression.mixin'));
+        $this->assertTrue(Str::hasMacro('compress'), 'StringCompressionMixin mixin should be registered when enabled');
+        $this->assertTrue(Str::hasMacro('decompress'), 'StringCompressionMixin mixin should be registered when enabled');
+    }
+
+    #[Test]
+    public function it_does_not_register_compression_mixin_when_disabled(): void
+    {
+        putenv('COMPRESSION_REGISTER_MIXIN=false');
+        Str::flushMacros();
+        $this->refreshApplication();
+
+        $this->assertFalse(config('pinimize.compression.mixin'));
+        $this->assertFalse(Str::hasMacro('compress'), 'StringCompressionMixin mixin should not be registered when disabled');
+        $this->assertFalse(Str::hasMacro('decompress'), 'StringCompressionMixin mixin should not be registered when disabled');
     }
 
     protected function tearDown(): void
