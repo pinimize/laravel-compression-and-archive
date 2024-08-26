@@ -35,6 +35,7 @@ Archiving and unarchiving operations are in **coming very soon**.
     - [Storage Disk](#storage-disk)
 - [Environment Variables](#environment-variables)
 - [Basic Usage](#basic-usage)
+    - [String Macros](#string-macros)
     - [Compressing Strings](#compressing-strings)
     - [Compressing Resources](#compressing-resources)
     - [Compressing Files](#compressing-files)
@@ -135,6 +136,46 @@ For easy configuration, you can use the following environment variables:
 Remember to update your `.env` file with these variables as needed.
 
 ## Basic Usage
+
+### String Macros
+
+The Pinimize package extends Laravel's `Str` facade with two convenient macros for string compression and decompression:
+
+```php
+Str::compress($data)
+
+// and
+
+Str::decompress($compressedData)
+```
+
+These macros allow you to easily compress & decompress data using the default compression driver.
+
+```php
+use Illuminate\Support\Str;
+
+// Using the default driver
+$originalString = "This is a long string that will be compressed.";
+$compressedString = Str::compress($originalString);
+
+// Specifying a driver
+$compressedStringGzip = Str::compress($originalString, 'gzip');
+$compressedStringZlib = Str::compress($originalString, 'zlib');
+```
+
+To decompress compressed data:
+
+```php
+use Illuminate\Support\Str;
+
+$decompressedString = Str::decompress($compressedString);
+
+// Specifying a driver
+$decompressedStringGzip = Str::decompress($compressedStringGzip, 'gzip');
+$decompressedStringZlib = Str::decompress($compressedStringZlib, 'zlib');
+```
+
+These macros provide a simple and convenient way to compress and decompress strings in your Laravel application, leveraging the power of the Pinimize package.
 
 ### Compressing Strings
 

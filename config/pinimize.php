@@ -22,6 +22,7 @@ return [
     */
     'compression' => [
         'default' => env('COMPRESSION_DRIVER', 'gzip'),
+        'mixin' => env('COMPRESSION_REGISTER_MIXIN', true),
         'drivers' => [
             'gzip' => [
                 'level' => env('GZIP_LEVEL', -1),
