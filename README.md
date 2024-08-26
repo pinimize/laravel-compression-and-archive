@@ -26,6 +26,7 @@ Archiving and unarchiving operations are in **coming very soon**.
 
 ## Table of Contents
 
+- [Features](#features)
 - [Installation](#installation)
 - [Configuration](#configuration)
     - [Default Driver](#default-driver)
@@ -35,16 +36,14 @@ Archiving and unarchiving operations are in **coming very soon**.
 - [Environment Variables](#environment-variables)
 - [Basic Usage](#basic-usage)
     - [Compressing Strings](#compressing-strings)
-    - [Compressing Files](#compressing-files)
     - [Compressing Resources](#compressing-resources)
-    - [Writing Compressed Content](#writing-compressed-content)
+    - [Compressing Files](#compressing-files)
+    - [Using Storage Disks](#using-storage-disks)
+- [Supported Data Types](#supported-data-types)
 - [Advanced Usage](#advanced-usage)
     - [Downloading Compressed Files](#downloading-compressed-files)
     - [Compression Ratio](#compression-ratio)
     - [Supported Algorithms](#supported-algorithms)
-- [Using the `put` Method](#using-the-put-method)
-    - [Supported Data Types](#supported-data-types)
-    - [Using Storage Disks](#using-storage-disks)
 - [Drivers](#drivers)
     - [Gzip Driver](#gzip-driver)
     - [Zlib Driver](#zlib-driver)
