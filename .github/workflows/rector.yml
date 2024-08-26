@@ -1,4 +1,4 @@
-name: Rector
+name: Run Rector
 
 on:
   push:

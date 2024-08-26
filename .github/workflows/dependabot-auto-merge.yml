@@ -1,4 +1,4 @@
-name: dependabot-auto-merge
+name: Auto merge Dependabot PRs
 on: pull_request_target
 
 permissions:
@@ -6,7 +6,8 @@ permissions:
   contents: write
 
 jobs:
-  dependabot:
+  dependabot-auto-merge:
+    name: Auto merge Dependabot PRs
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: ${{ github.actor == 'dependabot[bot]' }}
