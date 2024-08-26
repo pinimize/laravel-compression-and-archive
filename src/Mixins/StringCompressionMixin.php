@@ -4,22 +4,19 @@ declare(strict_types=1);
 
 namespace Pinimize\Mixins;
 
+use Closure;
 use Pinimize\Facades\Compression;
 use Pinimize\Facades\Decompression;
 
 class StringCompressionMixin
 {
-    public function compress()
+    public function compress(): Closure
     {
-        return function ($string, $driver = null) {
-            return Compression::driver($driver)->string($string);
-        };
+        return fn (string $string, ?string $driver = null): string => Compression::driver($driver)->string($string);
     }
 
-    public function decompress()
+    public function decompress(): Closure
     {
-        return function ($string, $driver = null) {
-            return Decompression::driver($driver)->string($string);
-        };
+        return fn (string $string, ?string $driver = null): string => Decompression::driver($driver)->string($string);
     }
 }

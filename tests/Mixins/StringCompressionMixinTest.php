@@ -14,32 +14,32 @@ use Pinimize\Tests\TestCase;
 
 class StringCompressionMixinTest extends TestCase
 {
-    private StringCompressionMixin $mixin;
+    private StringCompressionMixin $stringCompressionMixin;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->mixin = new StringCompressionMixin;
+        $this->stringCompressionMixin = new StringCompressionMixin;
     }
 
     #[Test]
     public function it_can_return_a_compress_closure(): void
     {
-        $compress = $this->mixin->compress();
+        $compress = $this->stringCompressionMixin->compress();
         $this->assertIsCallable($compress);
     }
 
     #[Test]
     public function it_can_return_a_decompress_closure(): void
     {
-        $decompress = $this->mixin->decompress();
+        $decompress = $this->stringCompressionMixin->decompress();
         $this->assertIsCallable($decompress);
     }
 
     #[Test]
     public function it_can_compress_a_string_using_facade(): void
     {
-        $compress = $this->mixin->compress();
+        $compress = $this->stringCompressionMixin->compress();
         $string = 'Test string';
 
         Compression::shouldReceive('driver')
@@ -58,7 +58,7 @@ class StringCompressionMixinTest extends TestCase
     #[Test]
     public function it_can_decompress_a_string_using_facade(): void
     {
-        $decompress = $this->mixin->decompress();
+        $decompress = $this->stringCompressionMixin->decompress();
         $compressedString = 'compressed_string';
 
         Decompression::shouldReceive('driver')
