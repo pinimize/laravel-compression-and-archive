@@ -74,6 +74,7 @@ class StorageCompressionMixinTest extends TestCase
         $this->storage->put($filepath, $content);
 
         $this->storage->compress($filepath, $filepath.'.gz');
+
         $result = $this->storage->decompress($filepath.'.gz', 'decompressed.txt');
 
         $this->assertTrue($result);
@@ -89,6 +90,7 @@ class StorageCompressionMixinTest extends TestCase
         $this->storage->put($filepath, $content);
 
         $this->storage->compress($filepath, $filepath.'.gz');
+
         $result = $this->storage->decompress($filepath.'.gz');
 
         $this->assertEquals($filepath, $result);
@@ -104,6 +106,7 @@ class StorageCompressionMixinTest extends TestCase
         $this->storage->put($filepath, $content);
 
         $this->storage->compress($filepath, $filepath.'.gz');
+
         $result = $this->storage->decompress($filepath.'.gz', null, true);
 
         $this->assertEquals($filepath, $result);
@@ -182,6 +185,7 @@ class StorageCompressionMixinTest extends TestCase
         $this->storage->put($filepath, $content);
 
         $this->storage->compress($filepath, $filepath.'.gz', false, 'zlib');
+
         $result = $this->storage->decompress($filepath.'.gz', 'decompressed.txt', false, 'zlib');
 
         $this->assertTrue($result);
