@@ -157,6 +157,15 @@ $compressed = Compression::string(new UploadedFile($path));
 // etc.
 ```
 
+The Decompression facade works in a similar way, only it decompresses the data:
+
+```php
+use Illuminate\Support\Facades\Decompression;
+
+$data = gzencode('Hello, World!');
+$compressed = Decompression::string($data); // Hello, World!
+```
+
 ### Compressing Resources
 
 You can compress data and have the compressed content returned as a resource by using the `resource` method. This method useful for working with data without loading everything into memory.
@@ -174,16 +183,54 @@ $resource = fopen('path/to/input.txt', 'r');
 $compressedResource = Compression::resource($resource);
 ```
 
+The Decompression facade works in a similar way, only it decompresses the resource:
+
+```php
+use Illuminate\Support\Facades\Decompression;
+
+// resource input
+$resource = fopen('path/to/compressed_data.txt.gz', 'r');
+
+$decompressedResource = Decompression::resource($resource);
+```
+
 ### Compressing Files
 
 The `put` method is a versatile way to write compressed content to a file. It supports various input types and offers flexibility in where the compressed file is stored.
+
+```php
+use Illuminate\Http\File;
+
+// Storing on a local disk
+Compression::put('local_output.gz', 'Content');
+
+// Compressing a file and storing on a local disk
+Compression::put('ftp_output.gz', new File($path));
+
+// Storing on Google Cloud Storage
+Compression::put('gcs_output.gz', 'Content');
+```
+
+The Decompression facade works in a similar way, only it decompresses the resource:
+
+```php
+use Illuminate\Support\Facades\Decompression;
+
+// resource input
+$resource = fopen('path/to/compressed.txt.gz', 'r');
+
+$decompressedResource = Decompression::put('local_output.txt', $resource);
+$decompressedResource = Decompression::put('local_output.txt', 'path/to/compressed.txt.gz');
+```
+
 ### Using Storage Disks
 
-By default, the `put` method writes files to the local filesystem. However, you can use Laravel's Storage facade to write compressed files to any configured disk by specifying the `disk` option:
+By default, the `put` method will use the filesystem provided in then config file, which defaults to the local filesystem. However, you can use Laravel's Storage facade to write compressed files to any configured disk by specifying the `disk` option:
 
 ```php
 use Illuminate\Support\Facades\Compression;
 
+// Storing on an S3 bucket, the path is relative to the bucket's root
 Compression::put('compressed/output.gz', 'Content to compress', [
     'disk' => 's3'
 ]);
@@ -210,12 +257,18 @@ Note that when using storage disks, the path you provide as the first argument t
 
 ### Supported Data Types
 
-The `put` method can handle several types of input:
+The `string`, `resource` and `put` methods can handle several types of input:
 
 1. **Strings**:
    ```php
    Compression::put('output.gz', 'String content to compress');
    ```
+
+If the provided string is a path to a file, the package will first attempt to locate the file on the specified filesystem.
+If the file cannot be found, the package will treat the string as raw content to be compressed.
+
+This behavior allows flexibility in handling both file paths and direct content compression within the same interface.
+If you want to be certain that a file specified by a path should be loaded, consider using the `Illuminate\Http\File` object or passing it in as a resource.
 
 2. **PSR-7 StreamInterface**:
    ```php
@@ -257,6 +310,12 @@ To create a download response for a compressed file:
 
 ```php
 return Compression::download('path/to/file.txt', 'downloaded_file.gz');
+```
+
+This also works for decompressing files:
+
+```php
+return Decompression::download('path/to/file.txt.gz', 'file.txt');
 ```
 
 ### Compression Ratio
