@@ -45,11 +45,11 @@ class StorageCompressionMixinTest extends TestCase
         $filepath = $this->faker->uuid().'.txt';
         $this->storage->put($filepath, $content);
 
-        $result = $this->storage->compress($filepath);
+        $result = $this->storage->compress($filepath, null, false, 'zlib');
 
-        $this->assertEquals($filepath.'.gz', $result);
-        $this->storage->assertExists($filepath.'.gz');
-        $this->assertNotEquals($content, $this->storage->get($filepath.'.gz'));
+        $this->assertEquals($filepath.'.zz', $result);
+        $this->storage->assertExists($filepath.'.zz');
+        $this->assertNotEquals($content, $this->storage->get($filepath.'.zz'));
     }
 
     #[Test]
@@ -89,13 +89,12 @@ class StorageCompressionMixinTest extends TestCase
         $filepath = $this->faker->uuid().'.txt';
         $this->storage->put($filepath, $content);
 
-        $this->storage->compress($filepath, $filepath.'.gz');
+        $compressed = $this->storage->compress($filepath, null, true, 'zlib');
+        $filepath2 = $this->storage->decompress($compressed, null, true, 'zlib');
 
-        $result = $this->storage->decompress($filepath.'.gz');
-
-        $this->assertEquals($filepath, $result);
-        $this->storage->assertExists($filepath);
-        $this->assertEquals($content, $this->storage->get($filepath));
+        $this->assertEquals($filepath, $filepath2);
+        $this->storage->assertExists($filepath2);
+        $this->assertEquals($content, $this->storage->get($filepath2));
     }
 
     #[Test]

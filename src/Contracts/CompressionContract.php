@@ -60,4 +60,6 @@ interface CompressionContract
      * @return array<int, scalar>
      */
     public function getSupportedAlgorithms(): array;
+
+    public function getFileExtension(): string;
 }

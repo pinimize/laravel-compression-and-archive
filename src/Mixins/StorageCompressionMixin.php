@@ -16,17 +16,18 @@ class StorageCompressionMixin
         return function (string $source, ?string $destination = null, bool $deleteSource = false, ?string $driver = null): string|bool {
             /** @var FilesystemManager $this */
             $filesystemOperator = $this->getDriver();
+            $compressionManager = Compression::driver($driver);
 
             if (! $filesystemOperator->has($source)) {
                 throw new InvalidArgumentException("Source file does not exist: {$source}");
             }
 
             $returnString = $destination === null;
-            $destination ??= $source.'.gz';
+            $destination ??= $source.'.'.$compressionManager->getFileExtension();
 
             try {
                 $sourceStream = $filesystemOperator->readStream($source);
-                $compressedStream = Compression::driver($driver)->resource($sourceStream);
+                $compressedStream = $compressionManager->resource($sourceStream);
                 $filesystemOperator->writeStream($destination, $compressedStream);
             } catch (Exception) {
                 return false;
@@ -49,13 +50,14 @@ class StorageCompressionMixin
         return function (string $source, ?string $destination = null, bool $deleteSource = false, ?string $driver = null): string|bool {
             /** @var FilesystemManager $this */
             $filesystemOperator = $this->getDriver();
+            $compressionManager = Compression::driver($driver);
 
             if (! $filesystemOperator->has($source)) {
                 throw new InvalidArgumentException("Source file does not exist: {$source}");
             }
 
             $returnString = $destination === null;
-            $destination ??= preg_replace('/\.gz$/', '', $source);
+            $destination ??= preg_replace("/\.{$compressionManager->getFileExtension()}$/", '', $source);
 
             try {
                 $sourceStream = $filesystemOperator->readStream($source);
