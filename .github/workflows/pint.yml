@@ -1,4 +1,4 @@
-name: Larvel Pint
+name: Run Laravel Pint
 
 on:
   push:
@@ -11,7 +11,8 @@ permissions:
   contents: write
 
 jobs:
-  php-code-styling:
+  pint:
+    name: Run Laravel Pint
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
