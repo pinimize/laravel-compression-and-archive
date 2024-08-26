@@ -488,7 +488,12 @@ public function boot()
 
 After registering your custom driver, you can use it like any other compression driver in your application. The same process applies for creating custom decompression drivers.
 
+## Links
+
+- Article - [Simplifying File Compression in Laravel with Pinimize](https://einarhansen.dev/articles/2024-08-27-laravel-new-compression-package-pinimize)
+
 ## Testing
+
 Run the tests with:
 
 ```bash
