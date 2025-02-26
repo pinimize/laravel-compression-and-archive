@@ -11,6 +11,10 @@ Archiving and unarchiving operations are in **coming very soon**.
 
 <p align="center"><img src="/docs/logo.jpg" alt="Logo with brown western bar doors with western scene in background and text that says: Saloon, Your Lone Star of your API integrations"></p>
 
+## Paused
+
+Development on this project is currently paused because of the lack of time to maintain it.
+
 ## Features
 
 - File compression and decompression
