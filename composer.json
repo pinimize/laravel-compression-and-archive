@@ -29,7 +29,7 @@
     "driftingly/rector-laravel": "^1.2.1",
     "guzzlehttp/guzzle": "^7.5",
     "laravel/pint": "^1.17",
-    "orchestra/testbench": "^9.1.5",
+    "orchestra/testbench": "^9.1.5 || ^10.0.0",
     "phpstan/extension-installer": "^1.1",
     "phpstan/phpstan-deprecation-rules": "^1.0",
     "phpstan/phpstan-phpunit": "^1.0",
